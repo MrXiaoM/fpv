@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalSerializationApi::class)
 package xyz.cssxsh.mirai.tool
 
 import kotlinx.coroutines.*
@@ -140,7 +141,7 @@ public class Shamrock(private val server: String, coroutineContext: CoroutineCon
 
 @Serializable
 private data class ShamrockData(
-    @SerialName("status")
+    @JsonNames("status", "msg")
     val status: String = "",
     @SerialName("code")
     val code: Int = 0,
