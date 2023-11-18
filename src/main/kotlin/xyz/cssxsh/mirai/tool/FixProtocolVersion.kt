@@ -261,7 +261,7 @@ public object FixProtocolVersion {
     public fun sync(protocol: BotConfiguration.MiraiProtocol): Unit = fetch(protocol = protocol, version = "latest")
 
     /**
-     * 从 [RomiChan/protocol-versions](https://github.com/RomiChan/protocol-versions) 获取指定版本协议
+     * 从 [MrXiaoM/qsign](https://github.com/MrXiaoM/qsign) 获取指定版本协议
      *
      * @since 1.9.6
      */
@@ -272,14 +272,14 @@ public object FixProtocolVersion {
                 File("android_phone.json") to
                     when (version) {
                         "", "latest" -> URL("https://raw.githubusercontent.com/RomiChan/protocol-versions/master/android_phone.json")
-                        else -> URL("https://raw.githubusercontent.com/RomiChan/protocol-versions/master/android_phone/${version}.json")
+                        else -> URL("https://raw.githubusercontent.com/MrXiaoM/qsign/mirai/txlib/${version}/android_phone.json")
                     }
             }
             BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
                 File("android_pad.json") to
                     when (version) {
                         "", "latest" -> URL("https://raw.githubusercontent.com/RomiChan/protocol-versions/master/android_pad.json")
-                        else -> URL("https://raw.githubusercontent.com/RomiChan/protocol-versions/master/android_pad/${version}.json")
+                        else -> URL("https://raw.githubusercontent.com/MrXiaoM/qsign/mirai/txlib/${version}/android_pad.json")
                     }
             }
             else -> throw IllegalArgumentException("不支持同步的协议: ${protocol.name}")
@@ -295,7 +295,7 @@ public object FixProtocolVersion {
                 .decodeToString()
         }.recoverCatching { throwable ->
             try {
-                URL("https://ghproxy.com/$url").openConnection()
+                URL("https://ghproxy.net/$url").openConnection()
                     .apply {
                         connectTimeout = 30_000
                         readTimeout = 30_000
@@ -303,7 +303,7 @@ public object FixProtocolVersion {
                     .getInputStream().use { it.readBytes() }
                     .decodeToString()
             } catch (cause: Throwable) {
-                val exception = throwable.cause as? java.net.UnknownHostException ?: throwable
+                val exception = throwable.cause as? UnknownHostException ?: throwable
                 exception.addSuppressed(cause)
                 throw exception
             }
