@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalSerializationApi::class)
 package xyz.cssxsh.mirai.tool
 
 import kotlinx.coroutines.*
@@ -64,16 +65,16 @@ public class Shamrock(private val server: String, coroutineContext: CoroutineCon
         val response = client.prepareGet("${server}/get_running_service")
             .execute().get()
 
-        return Json.decodeFromString(ListSerializer(ShamrockService.serializer()), response.responseBody)
+        return json.decodeFromString(ListSerializer(ShamrockService.serializer()), response.responseBody)
     }
 
     private fun whitelist(): List<String> {
         val response = client.prepareGet("${server}/get_cmd_whitelist")
             .execute().get()
-        val body = Json.decodeFromString(ShamrockData.serializer(), response.responseBody)
+        val body = json.decodeFromString(ShamrockData.serializer(), response.responseBody)
         body.check()
 
-        return Json.decodeFromJsonElement(ListSerializer(String.serializer()), body.data)
+        return json.decodeFromJsonElement(ListSerializer(String.serializer()), body.data)
     }
 
     override fun encryptTlv(context: EncryptServiceContext, tlvType: Int, payload: ByteArray): ByteArray? {
@@ -90,12 +91,12 @@ public class Shamrock(private val server: String, coroutineContext: CoroutineCon
             .addQueryParam("salt", salt.toUHexString(""))
             .addQueryParam("data", data)
             .execute().get()
-        val body = Json.decodeFromString(ShamrockData.serializer(), response.responseBody)
+        val body = json.decodeFromString(ShamrockData.serializer(), response.responseBody)
         body.check()
 
         logger.debug("Bot(${token.get()}) energy ${data}, ${body.status}")
 
-        return Json.decodeFromJsonElement(String.serializer(), body.data)
+        return json.decodeFromJsonElement(String.serializer(), body.data)
     }
 
     override fun qSecurityGetSign(
@@ -122,25 +123,25 @@ public class Shamrock(private val server: String, coroutineContext: CoroutineCon
             .addFormParam("seq", seq.toString())
             .addFormParam("buffer", buffer.toUHexString(""))
             .execute().get()
-        val body = Json.decodeFromString(ShamrockData.serializer(), response.responseBody)
+        val body = json.decodeFromString(ShamrockData.serializer(), response.responseBody)
         body.check()
 
         logger.debug("Bot(${token.get()}) sign ${cmd}, ${body.status}")
 
-        return Json.decodeFromJsonElement(ShamrockSignResult.serializer(), body.data)
+        return json.decodeFromJsonElement(ShamrockSignResult.serializer(), body.data)
     }
 
     public companion object {
 
         @JvmStatic
         internal val logger: MiraiLogger = MiraiLogger.Factory.create(Shamrock::class)
-
+        internal val json: Json = Json { ignoreUnknownKeys = true }
     }
 }
 
 @Serializable
 private data class ShamrockData(
-    @SerialName("status")
+    @JsonNames("status", "msg")
     val status: String = "",
     @SerialName("code")
     val code: Int = 0,
