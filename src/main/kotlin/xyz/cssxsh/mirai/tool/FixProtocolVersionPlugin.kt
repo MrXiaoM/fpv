@@ -10,11 +10,11 @@ import java.io.File
 @PublishedApi
 internal object FixProtocolVersionPlugin : KotlinPlugin(
     JvmPluginDescription(
-        id = "trpgbot",
+        id = "trpgbot.qsign",
         name = "trpgbot",
         version = "1.13.1"
     ) {
-        author("cssxsh")
+        author("cssxsh & MrXiaoM")
     }
 ) {
     override fun PluginComponentStorage.onLoad() {
