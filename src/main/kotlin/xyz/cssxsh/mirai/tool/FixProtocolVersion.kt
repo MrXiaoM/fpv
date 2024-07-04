@@ -282,8 +282,18 @@ public object FixProtocolVersion {
             BotConfiguration.MiraiProtocol.ANDROID_PAD -> File("android_pad.json")
             else -> null
         } ?: return
-        file.writeText(jsonPretty.encodeToString(json))
-        file.setLastModified(json.getValue("build_time").jsonPrimitive.long * 1000)
+        val content = jsonPretty.encodeToString(json)
+        val time = json.getValue("build_time").jsonPrimitive.long * 1000
+        file.writeText(content)
+        file.setLastModified(time)
+
+        NetworkServiceFactory.inst?.apply {
+            val other = File(protocolsFolder, "")
+            if (!other.exists()) {
+                other.writeText(content)
+                other.setLastModified(time)
+            }
+        }
     }
     /**
      * 从 [RomiChan/protocol-versions](https://github.com/RomiChan/protocol-versions) 获取指定版本协议
