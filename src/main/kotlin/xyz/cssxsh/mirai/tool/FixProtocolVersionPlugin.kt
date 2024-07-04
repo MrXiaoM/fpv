@@ -34,7 +34,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
         logger.info("注册服务...")
         try {
             NetworkServiceFactory.install()
-            with(File(System.getProperty(NetworkServiceFactory.CONFIG_PATH_PROPERTY, "KFCFactory.json"))) {
+            with(File(System.getProperty(NetworkServiceFactory.CONFIG_PATH_PROPERTY, "network.json"))) {
                 if (exists().not()) {
                     writeText(NetworkServiceFactory.DEFAULT_CONFIG)
                 }
