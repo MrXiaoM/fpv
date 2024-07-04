@@ -1,1 +1,1 @@
-rootProject.name = "fix-protocol-version"
+rootProject.name = "trpgbot"
