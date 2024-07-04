@@ -36,7 +36,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
     private val client = Dsl.asyncHttpClient(
         DefaultAsyncHttpClientConfig.Builder()
             .setKeepAlive(true)
-            .setUserAgent("curl/7.61.0")
+            .setUserAgent(userAgent)
             .setRequestTimeout(Duration.ofSeconds(90))
             .setConnectTimeout(Duration.ofSeconds(30))
             .setReadTimeout(Duration.ofSeconds(180))
@@ -252,6 +252,13 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
     }
 
     public companion object {
+        private val userAgent by lazy {
+            runCatching {
+                @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+                val ver = net.mamoe.mirai.console.internal.MiraiConsoleBuildConstants.versionConst
+                "curl/7.61.0 mirai/$ver"
+            }.getOrElse { "curl/7.61.0" }
+        }
         @JvmStatic
         internal val CMD_WHITE_LIST = UnidbgFetchQsign::class.java.getResource("cmd.txt")!!.readText().lines()
 
