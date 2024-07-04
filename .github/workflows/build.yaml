@@ -38,15 +38,6 @@ jobs:
           name: build
           path: build/mirai/*
 
-      - name: CopyConsoleRuntime
-        run: ./gradlew copyConsoleRuntime
-
-      - name: UploadConsoleRuntime
-        uses: actions/upload-artifact@v3
-        with:
-          name: console-runtime
-          path: run/console
-
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
