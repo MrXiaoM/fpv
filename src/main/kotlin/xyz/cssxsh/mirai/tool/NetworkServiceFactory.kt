@@ -54,7 +54,7 @@ public class NetworkServiceFactory(
         public val DEFAULT_CONFIG: String = """
             {
                 "main": { "base_url": "https://qsign.trpgbot.com", "key": "miraibbs" },
-                "try_cdn_first": true,
+                "try_cdn_first": false,
                 "cdn": [
                     { "base_url": "https://qsign.chahuyun.cn", "key": "selfshare" },
                     { "base_url": "http://sbtx.f3.ttvt.cc", "key": "selfshare" },
