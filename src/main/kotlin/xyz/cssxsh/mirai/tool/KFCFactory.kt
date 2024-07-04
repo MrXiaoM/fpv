@@ -2,20 +2,30 @@ package xyz.cssxsh.mirai.tool
 
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
-import kotlinx.serialization.builtins.*
 import kotlinx.serialization.json.*
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
 import java.io.File
-import java.io.IOException
 import java.net.ConnectException
 import java.net.URL
 
-public class KFCFactory(private val config: File) : EncryptService.Factory {
-    public constructor() : this(config = File(System.getProperty(CONFIG_PATH_PROPERTY, "KFCFactory.json")))
+public class KFCFactory(
+    private val config: File
+) : EncryptService.Factory {
+    override val priority: Int = -1
+    internal lateinit var networkConfig: NetworkConfig
+    internal val protocolsFolder = File(config.parentFile, "protocols")
+    public constructor() : this(config = File(System.getProperty(CONFIG_PATH_PROPERTY, "network.json")))
 
     public companion object {
+        internal val json = Json {
+            ignoreUnknownKeys = true
+        }
+        internal val jsonPretty = Json {
+            ignoreUnknownKeys = true
+            prettyPrint = true
+        }
 
         @JvmStatic
         internal val logger: MiraiLogger = MiraiLogger.Factory.create(KFCFactory::class)
@@ -30,37 +40,18 @@ public class KFCFactory(private val config: File) : EncryptService.Factory {
         }
 
         @JvmStatic
-        public fun info(): Map<String, String> {
-            val config = File(System.getProperty(CONFIG_PATH_PROPERTY, "KFCFactory.json"))
-            val serializer = MapSerializer(String.serializer(), Cola.serializer())
-            val servers = Json.decodeFromString(serializer, config.readText())
-
-            return servers.mapValues { (version, server) ->
-                "v${version} by ${server.type} from ${server.base}"
-            }
-        }
-
-        @JvmStatic
-        public val CONFIG_PATH_PROPERTY: String = "xyz.cssxsh.mirai.tool.KFCFactory.config"
+        public val CONFIG_PATH_PROPERTY: String = "trpgbot.sign.config"
 
         @JvmStatic
         public val DEFAULT_CONFIG: String = """
             {
-                "0.0.0": {
-                    "base_url": "http://127.0.0.1:8080",
-                    "type": "fuqiuluo/unidbg-fetch-qsign",
-                    "key": "114514"
-                },
-                "0.1.0": {
-                    "base_url": "http://127.0.0.1:8888",
-                    "type": "kiliokuara/magic-signer-guide",
-                    "server_identity_key": "vivo50",
-                    "authorization_key": "kfc"
-                },
-                "8.8.88": {
-                    "base_url": "",
-                    "type": "TLV544Provider"
-                }
+                "main": { "base_url": "https://qsign.trpgbot.com", "key": "miraibbs" },
+                "try_cdn_first": true,
+                "cdn": [
+                    { "base_url": "https://qsign.chahuyun.cn", "key": "selfshare" },
+                    { "base_url": "http://sbtx.f3.ttvt.cc", "key": "selfshare" },
+                    { "base_url": "http://qsign-v3.trpgbot.com", "key": "selfshare" }
+                ]
             }
         """.trimIndent()
 
@@ -69,10 +60,16 @@ public class KFCFactory(private val config: File) : EncryptService.Factory {
     }
 
     init {
+        protocolsFolder.mkdirs()
+        reload()
+    }
+
+    public fun reload() {
         with(config) {
             if (exists().not()) {
                 writeText(DEFAULT_CONFIG)
             }
+            networkConfig = Json.decodeFromString(NetworkConfig.serializer(), readText())
         }
     }
 
@@ -92,111 +89,94 @@ public class KFCFactory(private val config: File) : EncryptService.Factory {
             BotConfiguration.MiraiProtocol.ANDROID_PHONE, BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
                 @Suppress("INVISIBLE_MEMBER")
                 val version = MiraiProtocolInternal[protocol].ver
-                val server = with(config) {
-                    val serializer = MapSerializer(String.serializer(), Cola.serializer())
-                    val servers = try {
-                        Json.decodeFromString(serializer, readText())
-                    } catch (cause: SerializationException) {
-                        throw RuntimeException("配置文件格式错误，${toPath().toUri()}", cause)
-                    } catch (cause: IOException) {
-                        throw RuntimeException("配置文件读取错误，${toPath().toUri()}", cause)
-                    }
-                    servers[version]
-                        ?: throw NoSuchElementException("没有找到对应 ${protocol}(${version}) 的服务配置，${toPath().toUri()}")
-                }
 
-                logger.info("create EncryptService(id=${context.id}), protocol=${protocol}(${version}) by ${server.type} from ${config.toPath().toUri()}")
-                when (val type = server.type.ifEmpty { throw IllegalArgumentException("need server type") }) {
-                    "fuqiuluo/unidbg-fetch-qsign", "fuqiuluo", "unidbg-fetch-qsign" -> {
-                        try {
-                            val about = URL(server.base).readText()
-                            logger.info("unidbg-fetch-qsign by ${server.base} about \n" + about)
-                            when {
-                                "version" !in about -> {
-                                    // 低于等于 1.1.3 的的版本 requestToken 不工作
-                                    System.setProperty(UnidbgFetchQsign.REQUEST_TOKEN_INTERVAL, "0")
-                                    logger.error("请更新 unidbg-fetch-qsign")
-                                }
-                                version !in about -> {
-                                    throw IllegalStateException("unidbg-fetch-qsign by ${server.base} 与 ${protocol}(${version}) 似乎不匹配")
-                                }
-                                "IAA" !in about -> {
-                                    logger.error("请确认服务类型为 unidbg-fetch-qsign")
-                                }
+                logger.info(
+                    "create EncryptService(id=${context.id}), protocol=${protocol}(${version}) from ${
+                        config.toPath().toUri()
+                    }"
+                )
+
+                val (about, server) = networkConfig.tryServers()
+
+                checkProtocolUpdate(protocol, about)
+                checkSignServerAvailability(protocol, version, server, about)
+
+                UnidbgFetchQsign(
+                    server = server.base,
+                    key = server.key,
+                    coroutineContext = serviceSubScope.coroutineContext
+                )
+            }
+            BotConfiguration.MiraiProtocol.ANDROID_WATCH,
+            BotConfiguration.MiraiProtocol.IPAD,
+            BotConfiguration.MiraiProtocol.MACOS -> throw UnsupportedOperationException(protocol.name)
+        }
+    }
+
+    @Suppress("INVISIBLE_MEMBER")
+    private fun checkProtocolUpdate(
+        protocol: BotConfiguration.MiraiProtocol,
+        about: String
+    ) {
+        val data = json.parseToJsonElement(about)
+        val targetVer = runCatching {
+            data.jsonObject["data"]!!.jsonObject["protocol"]!!.jsonObject["version"]!!.jsonPrimitive.content
+        }.getOrElse { "" }
+
+        if (targetVer.isEmpty()) logger.warning("无法从 trpgbot 回应中获得协议版本，放弃自动更换版本")
+        else {
+            val file = File(protocolsFolder, "${protocol.name.lowercase()}_$targetVer.json")
+
+            try {
+                if (file.exists()) {
+                    FixProtocolVersion.load(protocol, file)
+                    val buildVer = MiraiProtocolInternal[protocol].buildVer
+                    logger.info("已将 $protocol 从本地配置自动升级至 $buildVer")
+                } else {
+                    val result = runCatching {
+                        FixProtocolVersion.fetchWithResult(protocol, targetVer)
+                    }.fold(
+                        onSuccess = { it },
+                        onFailure = {
+                            if (it is IllegalStateException) {
+                                // TODO: 其它途径
                             }
-                        } catch (cause: ConnectException) {
-                            throw RuntimeException("请检查 unidbg-fetch-qsign by ${server.base} 的可用性", cause)
-                        } catch (cause: java.io.FileNotFoundException) {
-                            throw RuntimeException("请检查 unidbg-fetch-qsign by ${server.base} 的可用性", cause)
+                            throw it
                         }
-                        if (server.key.isEmpty()) {
-                            logger.warning("unidbg-fetch-qsign key is empty")
-                        }
-                        UnidbgFetchQsign(
-                            server = server.base,
-                            key = server.key,
-                            coroutineContext = serviceSubScope.coroutineContext
-                        )
-                    }
-                    "kiliokuara/magic-signer-guide", "kiliokuara", "magic-signer-guide", "vivo50" -> {
-                        try {
-                            val about = URL(server.base).readText()
-                            logger.info("magic-signer-guide by ${server.base} about \n" + about)
-                            when {
-                                "void" == about.trim() -> {
-                                    logger.error("请更新 magic-signer-guide 的 docker 镜像")
-                                }
-                                version !in about -> {
-                                    throw IllegalStateException("magic-signer-guide by ${server.base} 与 ${protocol}(${version}) 似乎不匹配")
-                                }
-                                "magic-signer-guide" !in about -> {
-                                    logger.error("请确认服务类型为 magic-signer-guide")
-                                }
-                            }
-                        } catch (cause: ConnectException) {
-                            throw RuntimeException("请检查 magic-signer-guide by ${server.base} 的可用性", cause)
-                        } catch (cause: java.io.FileNotFoundException) {
-                            throw RuntimeException("请检查 unidbg-fetch-qsign by ${server.base} 的可用性", cause)
-                        }
-                        if (server.serverIdentityKey.isEmpty()) {
-                            logger.warning("magic-signer-guide server_identity_key is empty")
-                        }
-                        if (server.authorizationKey.isEmpty()) {
-                            logger.warning("magic-signer-guide authorization_key is empty")
-                        }
-                        ViVo50(
-                            server = server.base,
-                            serverIdentityKey = server.serverIdentityKey,
-                            authorizationKey = server.authorizationKey,
-                            coroutineContext = serviceSubScope.coroutineContext
-                        )
-                    }
-                    "linxinrao/Shamrock", "linxinrao", "Shamrock" -> {
-                        try {
-                            val about = URL(server.base + "/get_msf_info").readText()
-                            logger.info("Shamrock by ${server.base} about \n" + about)
-                            if (version !in about) {
-                                throw IllegalStateException("Shamrock by ${server.base} 与 ${protocol}(${version}) 似乎不匹配")
-                            }
-                        } catch (cause: ConnectException) {
-                            throw RuntimeException("请检查 Shamrock by ${server.base} 的可用性", cause)
-                        } catch (cause: java.io.FileNotFoundException) {
-                            throw RuntimeException("请检查 Shamrock by ${server.base} 的可用性", cause)
-                        }
-                        Shamrock(
-                            server = server.base,
-                            coroutineContext = serviceSubScope.coroutineContext
-                        )
-                    }
-                    "TLV544Provider" -> TLV544Provider()
-                    else -> throw UnsupportedOperationException(type)
+                    )
+                    val buildVer = MiraiProtocolInternal[protocol].buildVer
+                    file.writeText(jsonPretty.encodeToString(result))
+                    logger.info("已将 $protocol 从网络配置自动升级至 $buildVer，并保存配置到本地")
+                }
+            } catch (e: Exception) {
+                logger.warning("协议自动升级失败", e)
+            }
+        }
+    }
+
+    private fun checkSignServerAvailability(
+        protocol: BotConfiguration.MiraiProtocol,
+        version: String,
+        server: Cola,
+        about: String
+    ) {
+        try {
+            logger.info("trpgbot from ${server.base} about \n" + about)
+            when {
+                version !in about -> {
+                    throw IllegalStateException("trpgbot by ${server.base} 与协议 ${protocol}(${version}) 似乎不匹配")
+                }
+                "IAA" !in about -> {
+                    logger.error("请确认服务类型为 trpgbot")
                 }
             }
-            BotConfiguration.MiraiProtocol.ANDROID_WATCH -> throw UnsupportedOperationException(protocol.name)
-            BotConfiguration.MiraiProtocol.IPAD, BotConfiguration.MiraiProtocol.MACOS -> {
-                logger.warning("$protocol 尚不支持签名服务，大概率登录失败")
-                TLV544Provider()
-            }
+        } catch (cause: ConnectException) {
+            throw RuntimeException("请检查 trpgbot from ${server.base} 的可用性", cause)
+        } catch (cause: java.io.FileNotFoundException) {
+            throw RuntimeException("请检查 trpgbot from ${server.base} 的可用性", cause)
+        }
+        if (server.key.isEmpty()) {
+            logger.warning("trpgbot key is empty")
         }
     }
 

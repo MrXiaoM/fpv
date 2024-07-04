@@ -1,5 +1,6 @@
 package xyz.cssxsh.mirai.tool
 
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
@@ -13,6 +14,11 @@ public object FixProtocolVersion {
     private val clazz = MiraiProtocolInternal::class.java
 
     private val constructor = clazz.constructors.single()
+
+    private val jsonPretty = Json {
+        ignoreUnknownKeys = true
+        prettyPrint = true
+    }
 
     @PublishedApi
     internal val protocols: MutableMap<BotConfiguration.MiraiProtocol, MiraiProtocolInternal> by lazy {
@@ -270,21 +276,35 @@ public object FixProtocolVersion {
      */
     @JvmStatic
     public fun fetch(protocol: BotConfiguration.MiraiProtocol, version: String) {
-        val source = System.getProperty(FETCH_SOURCE_PROPERTY, "RomiChan")
-        val (file, url) = when (protocol) {
+        val json = fetchWithResult(protocol, version)
+        val file = when (protocol) {
+            BotConfiguration.MiraiProtocol.ANDROID_PHONE -> File("android_phone.json")
+            BotConfiguration.MiraiProtocol.ANDROID_PAD -> File("android_pad.json")
+            else -> null
+        } ?: return
+        file.writeText(jsonPretty.encodeToString(json))
+        file.setLastModified(json.getValue("build_time").jsonPrimitive.long * 1000)
+    }
+    /**
+     * 从 [RomiChan/protocol-versions](https://github.com/RomiChan/protocol-versions) 获取指定版本协议
+     *
+     * @since 1.13.1
+     */
+    @JvmStatic
+    public fun fetchWithResult(protocol: BotConfiguration.MiraiProtocol, version: String): JsonObject {
+        val source = System.getProperty(FETCH_SOURCE_PROPERTY, "MrXiaoM")
+        val url = when (protocol) {
             BotConfiguration.MiraiProtocol.ANDROID_PHONE -> {
-                File("android_phone.json") to
-                    when (version) {
-                        "", "latest" -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_phone.json")
-                        else -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_phone/${version}.json")
-                    }
+                when (version) {
+                    "", "latest" -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_phone.json")
+                    else -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_phone/${version}.json")
+                }
             }
             BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
-                File("android_pad.json") to
-                    when (version) {
-                        "", "latest" -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_pad.json")
-                        else -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_pad/${version}.json")
-                    }
+                when (version) {
+                    "", "latest" -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_pad.json")
+                    else -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_pad/${version}.json")
+                }
             }
             else -> throw IllegalArgumentException("不支持同步的协议: ${protocol.name}")
         }
@@ -307,7 +327,7 @@ public object FixProtocolVersion {
                     .getInputStream().use { it.readBytes() }
                     .decodeToString()
             } catch (cause: Throwable) {
-                val exception = throwable.cause as? java.net.UnknownHostException ?: throwable
+                val exception = throwable.cause as? UnknownHostException ?: throwable
                 exception.addSuppressed(cause)
                 throw exception
             }
@@ -315,8 +335,6 @@ public object FixProtocolVersion {
             onSuccess = { text ->
                 val online = Json.parseToJsonElement(text).jsonObject
                 check(online.getValue("app_id").jsonPrimitive.long != 0L) { "载入的 ${protocol.name.lowercase()}.json 有误" }
-                file.writeText(text)
-                file.setLastModified(online.getValue("build_time").jsonPrimitive.long * 1000)
                 online
             },
             onFailure = { cause ->
@@ -325,6 +343,7 @@ public object FixProtocolVersion {
         )
 
         store(protocol, json)
+        return json
     }
 
     @JvmStatic

@@ -13,6 +13,8 @@ import org.asynchttpclient.*
 import java.time.Duration
 import kotlin.coroutines.*
 
+import xyz.cssxsh.mirai.tool.KFCFactory.Companion.json
+
 public class UnidbgFetchQsign(private val server: String, private val key: String, coroutineContext: CoroutineContext) :
     EncryptService, CoroutineScope {
 
@@ -250,9 +252,6 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
     }
 
     public companion object {
-        private val json = Json {
-            ignoreUnknownKeys = true
-        }
         @JvmStatic
         internal val CMD_WHITE_LIST = UnidbgFetchQsign::class.java.getResource("cmd.txt")!!.readText().lines()
 

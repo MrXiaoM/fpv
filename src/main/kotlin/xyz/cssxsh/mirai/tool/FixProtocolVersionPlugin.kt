@@ -43,7 +43,6 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
             }
         } catch (_: NoClassDefFoundError) {
             logger.warning("注册服务失败，请在 2.15.0-dev-105 或更高版本下运行")
-            TLV544Provider.install()
         } catch (cause: Throwable) {
             logger.error("注册服务失败", cause)
         }
@@ -52,37 +51,9 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
     override fun onEnable() {
         logger.info {
             buildString {
-                appendLine("protocol commands: info, load, fetch")
-                appendLine("example:")
-                appendLine("  protocol info")
-                appendLine("  protocol load ANDROID_PHONE")
-                appendLine("  protocol fetch ANDROID_PAD 8.9.63")
-            }
-        }
-        logger.info {
-            buildString {
                 appendLine("当前各登录协议版本日期: ")
                 for ((_, info) in FixProtocolVersion.info()) {
                     appendLine(info)
-                }
-
-                if ("8.8.88" in this) appendLine().append("Android 8.8.88 协议疑似被拉黑，请谨慎尝试登录")
-            }
-        }
-        logger.info {
-            buildString {
-                appendLine("当前签名服务配置信息: ")
-                for ((version, info) in KFCFactory.info()) {
-                    if (version == "0.0.0" || version == "0.1.0") continue
-                    appendLine(info)
-                }
-
-                @Suppress("INVISIBLE_MEMBER")
-                setOf(
-                    MiraiProtocolInternal[BotConfiguration.MiraiProtocol.ANDROID_PHONE].ver,
-                    MiraiProtocolInternal[BotConfiguration.MiraiProtocol.ANDROID_PAD].ver
-                ).forEach { version ->
-                    if (version !in this) appendLine().append("缺少 v${version} 配置")
                 }
             }
         }
