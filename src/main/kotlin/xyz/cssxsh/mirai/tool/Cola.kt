@@ -11,37 +11,40 @@ internal data class NetworkConfig(
     @SerialName("try_cdn_first")
     val tryCdnFirst: Boolean,
     @SerialName("cdn")
-    val cdnList: List<Cola>,
+    val cdnList: MutableList<Cola>,
 ) {
     fun tryServers(): Pair<String, Cola> {
+        val cdn = cdnList.toList()
         if (tryCdnFirst) {
-            for (s in cdnList) {
-                NetworkServiceFactory.logger.info("trying cdn ${s.base}")
+            for (s in cdn) {
+                NetworkServiceFactory.logger.info("trying CDN ${s.base}")
                 try {
                     val about = URL(s.base).readText()
                     return about to s
                 } catch (cause: ConnectException) {
-                    NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用 ${cause.message}")
+                    NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用，下次重载配置前将不连接该 CDN. ${cause.message}")
+                    cdnList.removeIf { it.base == s.base }
                 }
             }
         }
-        NetworkServiceFactory.logger.info("trying main server ${main.base}")
+        NetworkServiceFactory.logger.info("trying Main Server ${main.base}")
         try {
             val about = URL(main.base).readText()
             return about to main
         } catch (cause: ConnectException) {
-            NetworkServiceFactory.logger.warning("trpgbot main by ${main.base} 暂不可用 ${cause.message}")
+            NetworkServiceFactory.logger.warning("trpgbot Main by ${main.base} 暂不可用 ${cause.message}")
             if (tryCdnFirst) {
                 throw RuntimeException("请检查 trpgbot 的可用性")
             }
         }
-        for (s in cdnList) {
-            NetworkServiceFactory.logger.info("trying cdn ${s.base}")
+        for (s in cdn) {
+            NetworkServiceFactory.logger.info("trying CDN ${s.base}")
             try {
                 val about = URL(s.base).readText()
                 return about to s
             } catch (cause: ConnectException) {
-                NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用 ${cause.message}")
+                NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用，下次重载配置前将不连接该 CDN ${cause.message}")
+                cdnList.removeIf { it.base == s.base }
             }
         }
         throw RuntimeException("请检查 trpgbot 的可用性")

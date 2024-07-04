@@ -40,6 +40,13 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
                 }
                 logger.info("服务配置文件: \n ${toPath().toUri()}")
             }
+            logger.warning("您正在使用远程签名服务，数据包将经过签名服务器，请勿添加不可信源")
+            val factory = NetworkServiceFactory.inst ?: throw IllegalStateException("当前使用的签名服务并非 trpgbot")
+            logger.info("正在检查可用的签名服务器")
+
+            val (about, _) = factory.networkConfig.tryServers()
+            factory.checkProtocolUpdate(BotConfiguration.MiraiProtocol.ANDROID_PAD, about)
+
         } catch (_: NoClassDefFoundError) {
             logger.warning("注册服务失败，请在 2.15.0-dev-105 或更高版本下运行")
         } catch (cause: Throwable) {
@@ -54,6 +61,8 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
                 for ((_, info) in FixProtocolVersion.info()) {
                     appendLine(info)
                 }
+                appendLine()
+                appendLine("请使用 ANDROID_PAD 协议登录")
             }
         }
         FixProtocolVersionCommand.register()

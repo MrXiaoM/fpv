@@ -3,6 +3,10 @@ package xyz.cssxsh.mirai.tool
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
+import net.mamoe.mirai.console.command.ConsoleCommandSender
+import net.mamoe.mirai.console.command.SystemCommandSender
+import net.mamoe.mirai.console.util.AnsiMessageBuilder
+import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
@@ -79,7 +83,7 @@ public class NetworkServiceFactory(
 
     override fun createForBot(context: EncryptServiceContext, serviceSubScope: CoroutineScope): EncryptService {
         if (created.add(context.id).not()) {
-            throw UnsupportedOperationException("repeated create EncryptService(id=${context.id})")
+            throw UnsupportedOperationException("重复创建 EncryptService(id=${context.id})")
         }
         serviceSubScope.coroutineContext.job.invokeOnCompletion {
             created.remove(context.id)
@@ -93,16 +97,14 @@ public class NetworkServiceFactory(
             BotConfiguration.MiraiProtocol.ANDROID_PHONE, BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
                 @Suppress("INVISIBLE_MEMBER")
                 val version = MiraiProtocolInternal[protocol].ver
-
                 logger.info(
-                    "create EncryptService(id=${context.id}), protocol=${protocol}(${version}) from ${
+                    "创建 EncryptService(id=${context.id}), protocol=${protocol}(${version}) from ${
                         config.toPath().toUri()
                     }"
                 )
 
                 val (about, server) = networkConfig.tryServers()
 
-                checkProtocolUpdate(protocol, about)
                 checkSignServerAvailability(protocol, version, server, about)
 
                 UnidbgFetchQsign(
@@ -118,13 +120,20 @@ public class NetworkServiceFactory(
     }
 
     @Suppress("INVISIBLE_MEMBER")
-    private fun checkProtocolUpdate(
+    internal fun checkProtocolUpdate(
         protocol: BotConfiguration.MiraiProtocol,
         about: String
     ) {
         val data = json.parseToJsonElement(about)
         val targetVer = runCatching {
-            data.jsonObject["data"]!!.jsonObject["protocol"]!!.jsonObject["version"]!!.jsonPrimitive.content
+            val jsonData = data.jsonObject["data"]!!.jsonObject
+            if (jsonData.containsKey("protocol")) {
+                jsonData["protocol"]!!.jsonObject["version"]!!.jsonPrimitive.content
+            } else if (jsonData.containsKey("qua") && jsonData.containsKey("version")) {
+                jsonData["version"]!!.jsonPrimitive.content
+            } else {
+                ""
+            }
         }.getOrElse { "" }
 
         if (targetVer.isEmpty()) logger.warning("无法从 trpgbot 回应中获得协议版本，放弃自动更换版本")
