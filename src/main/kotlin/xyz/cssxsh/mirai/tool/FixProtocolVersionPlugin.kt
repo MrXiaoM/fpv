@@ -4,7 +4,6 @@ import net.mamoe.mirai.console.command.CommandManager.INSTANCE.register
 import net.mamoe.mirai.console.command.CommandManager.INSTANCE.unregister
 import net.mamoe.mirai.console.extension.*
 import net.mamoe.mirai.console.plugin.jvm.*
-import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
 import java.io.File
 
@@ -34,10 +33,10 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
         }
         logger.info("注册服务...")
         try {
-            KFCFactory.install()
-            with(File(System.getProperty(KFCFactory.CONFIG_PATH_PROPERTY, "KFCFactory.json"))) {
+            NetworkServiceFactory.install()
+            with(File(System.getProperty(NetworkServiceFactory.CONFIG_PATH_PROPERTY, "KFCFactory.json"))) {
                 if (exists().not()) {
-                    writeText(KFCFactory.DEFAULT_CONFIG)
+                    writeText(NetworkServiceFactory.DEFAULT_CONFIG)
                 }
                 logger.info("服务配置文件: \n ${toPath().toUri()}")
             }

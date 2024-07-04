@@ -4,4 +4,4 @@ import net.mamoe.mirai.internal.network.handler.selector.*
 
 @PublishedApi
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-internal class KFCStateException(message: String) : NetworkException(message = message, recoverable = true)
+internal class NetworkServiceStateException(message: String) : NetworkException(message = message, recoverable = true)

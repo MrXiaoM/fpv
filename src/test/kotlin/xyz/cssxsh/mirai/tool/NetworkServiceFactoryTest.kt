@@ -1,15 +1,13 @@
 package xyz.cssxsh.mirai.tool
 
-import kotlinx.serialization.*
 import net.mamoe.mirai.internal.spi.*
-import net.mamoe.mirai.spi.*
 import kotlin.test.*
 
-internal class KFCFactoryTest {
+internal class NetworkServiceFactoryTest {
 
     @Test
     fun service() {
         @Suppress("INVISIBLE_MEMBER")
-        assertIs<KFCFactory>(EncryptService.Companion.factory)
+        assertIs<NetworkServiceFactory>(EncryptService.Companion.factory)
     }
 }

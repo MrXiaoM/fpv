@@ -13,7 +13,7 @@ import org.asynchttpclient.*
 import java.time.Duration
 import kotlin.coroutines.*
 
-import xyz.cssxsh.mirai.tool.KFCFactory.Companion.json
+import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
 
 public class UnidbgFetchQsign(private val server: String, private val key: String, coroutineContext: CoroutineContext) :
     EncryptService, CoroutineScope {
@@ -24,7 +24,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
                 is CancellationException, is InterruptedException -> {
                     // ignored
                 }
-                is KFCStateException -> {
+                is NetworkServiceStateException -> {
                     // ignored
                 }
                 else -> {
@@ -108,7 +108,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
     private fun DataWrapper.check(uin: Long) {
         if (code == 0) return
         token.compareAndSet(uin, 0)
-        val cause = KFCStateException("unidbg-fetch-qsign 服务异常, 请检查其日志, '$message'")
+        val cause = NetworkServiceStateException("trpgbot 服务异常, 请检查其日志, '$message'")
         launch(CoroutineName(name = "Dropped(${uin})")) {
             if (message !in RESET_SESSION) return@launch
             @OptIn(MiraiInternalApi::class)

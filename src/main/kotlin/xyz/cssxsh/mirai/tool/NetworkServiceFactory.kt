@@ -10,7 +10,7 @@ import java.io.File
 import java.net.ConnectException
 import java.net.URL
 
-public class KFCFactory(
+public class NetworkServiceFactory(
     private val config: File
 ) : EncryptService.Factory {
     override val priority: Int = -1
@@ -28,14 +28,14 @@ public class KFCFactory(
         }
 
         @JvmStatic
-        internal val logger: MiraiLogger = MiraiLogger.Factory.create(KFCFactory::class)
+        internal val logger: MiraiLogger = MiraiLogger.Factory.create(NetworkServiceFactory::class)
 
         @JvmStatic
         public fun install() {
             Services.register(
                 EncryptService.Factory::class.qualifiedName!!,
-                KFCFactory::class.qualifiedName!!,
-                ::KFCFactory
+                NetworkServiceFactory::class.qualifiedName!!,
+                ::NetworkServiceFactory
             )
         }
 
@@ -206,6 +206,6 @@ public class KFCFactory(
     }
 
     override fun toString(): String {
-        return "KFCFactory(config=${config.toPath().toUri()})"
+        return "NetworkServiceFactory(config=${config.toPath().toUri()})"
     }
 }
