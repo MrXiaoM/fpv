@@ -27,6 +27,10 @@ public class NetworkServiceFactory(
             prettyPrint = true
         }
 
+        public val inst: NetworkServiceFactory?
+            @Suppress("INVISIBLE_MEMBER")
+            get() = EncryptService.Companion.factory as? NetworkServiceFactory
+
         @JvmStatic
         internal val logger: MiraiLogger = MiraiLogger.Factory.create(NetworkServiceFactory::class)
 
