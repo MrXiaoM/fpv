@@ -139,7 +139,10 @@ public class KFCFactory(
                         onSuccess = { it },
                         onFailure = {
                             if (it is IllegalStateException) {
-                                // TODO: 其它途径
+                                return@fold fetchVersionInfoFromGuide(targetVer)
+                                    ?: throw IllegalStateException(
+                                        "从 protocol-versions 及 qsign-guide 下载协议失败"
+                                    )
                             }
                             throw it
                         }
@@ -152,6 +155,28 @@ public class KFCFactory(
                 logger.warning("协议自动升级失败", e)
             }
         }
+    }
+
+    private fun fetchVersionInfoFromGuide(targetVer: String): JsonObject? {
+        val text = URL("https://qsign-guide.trpgbot.com/").readText()
+        return runCatching {
+            var flag1 = false
+            val s = StringBuilder()
+            for (c in text) {
+                if (!flag1 && c == '{') {
+                    flag1 = true
+                }
+                if (flag1) s.append(c)
+                if (flag1 && c == '}') {
+                    if (targetVer in s) {
+                        break
+                    }
+                    s.clear()
+                    flag1 = false
+                }
+            }
+            json.parseToJsonElement(s.toString())
+        }.getOrNull()?.jsonObject
     }
 
     private fun checkSignServerAvailability(
