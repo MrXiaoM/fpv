@@ -11,9 +11,9 @@ import java.io.File
 @PublishedApi
 internal object FixProtocolVersionPlugin : KotlinPlugin(
     JvmPluginDescription(
-        id = "xyz.cssxsh.mirai.fix-protocol-version",
-        name = "fix-protocol-version",
-        version = "1.13.0"
+        id = "trpgbot",
+        name = "trpgbot",
+        version = "1.13.1"
     ) {
         author("cssxsh")
     }

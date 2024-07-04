@@ -6,8 +6,9 @@ import net.mamoe.mirai.utils.*
 @PublishedApi
 internal object FixProtocolVersionCommand : CompositeCommand(
     owner = FixProtocolVersionPlugin,
-    "protocol",
-    description = "FixProtocolVersionCommand"
+    "trpgBotSign",
+    "tbs",
+    description = "Plugin Command"
 ) {
     @SubCommand("fetch", "sync")
     suspend fun CommandSender.fetch(protocol: BotConfiguration.MiraiProtocol, version: String = "latest") {
