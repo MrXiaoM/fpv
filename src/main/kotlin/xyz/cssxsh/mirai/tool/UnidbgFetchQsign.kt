@@ -14,6 +14,7 @@ import java.time.Duration
 import kotlin.coroutines.*
 
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
+import java.util.concurrent.ExecutionException
 
 public class UnidbgFetchQsign(private val server: String, private val key: String, coroutineContext: CoroutineContext) :
     EncryptService, CoroutineScope {
@@ -36,11 +37,16 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
     private val client = Dsl.asyncHttpClient(
         DefaultAsyncHttpClientConfig.Builder()
             .setKeepAlive(true)
-            .setUserAgent(userAgent)
+            .setMaxRequestRetry(3)
+            .setUserAgent(NetworkServiceFactory.userAgent)
             .setRequestTimeout(Duration.ofSeconds(90))
             .setConnectTimeout(Duration.ofSeconds(30))
             .setReadTimeout(Duration.ofSeconds(180))
     )
+
+    private fun BoundRequestBuilder.applyHeader(): BoundRequestBuilder = apply {
+        NetworkServiceFactory.headers.forEach(::setHeader)
+    }
 
     private var channel0: EncryptService.ChannelProxy? = null
 
@@ -82,6 +88,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
 
     private fun register(uin: Long, androidId: String, guid: String, qimei36: String) {
         val response = client.prepareGet("${server}/register")
+            .applyHeader()
             .addQueryParam("uin", uin.toString())
             .addQueryParam("android_id", androidId)
             .addQueryParam("guid", guid)
@@ -96,6 +103,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
 
     private fun destroy(uin: Long) {
         val response = client.prepareGet("${server}/destroy")
+            .applyHeader()
             .addQueryParam("uin", uin.toString())
             .addQueryParam("key", key)
             .execute().get()
@@ -131,6 +139,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
 
     private fun customEnergy(uin: Long, salt: ByteArray, data: String): String {
         val response = client.prepareGet("${server}/custom_energy")
+            .applyHeader()
             .addQueryParam("uin", uin.toString())
             .addQueryParam("salt", salt.toUHexString(""))
             .addQueryParam("data", data)
@@ -185,6 +194,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
 
     private fun sign(uin: Long, cmd: String, seq: Int, buffer: ByteArray): SignResult {
         val response = client.preparePost("${server}/sign")
+            .applyHeader()
             .addFormParam("uin", uin.toString())
             .addFormParam("cmd", cmd)
             .addFormParam("seq", seq.toString())
@@ -200,6 +210,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
 
     private fun requestToken(uin: Long): List<RequestCallback> {
         val response = client.prepareGet("${server}/request_token")
+            .applyHeader()
             .addQueryParam("uin", uin.toString())
             .execute().get()
         val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
@@ -212,6 +223,7 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
 
     private fun submit(uin: Long, cmd: String, callbackId: Long, buffer: ByteArray) {
         val response = client.prepareGet("${server}/submit")
+            .applyHeader()
             .addQueryParam("uin", uin.toString())
             .addQueryParam("cmd", cmd)
             .addQueryParam("callback_id", callbackId.toString())
@@ -252,13 +264,6 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
     }
 
     public companion object {
-        private val userAgent by lazy {
-            runCatching {
-                @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-                val ver = net.mamoe.mirai.console.internal.MiraiConsoleBuildConstants.versionConst
-                "curl/7.61.0 mirai/$ver"
-            }.getOrElse { "curl/7.61.0" }
-        }
         @JvmStatic
         internal val CMD_WHITE_LIST = UnidbgFetchQsign::class.java.getResource("cmd.txt")!!.readText().lines()
 

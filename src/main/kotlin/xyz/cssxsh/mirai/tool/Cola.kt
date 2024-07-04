@@ -1,8 +1,11 @@
 package xyz.cssxsh.mirai.tool
 
 import kotlinx.serialization.*
+import java.io.IOException
 import java.net.ConnectException
+import java.net.HttpURLConnection
 import java.net.URL
+import javax.net.ssl.SSLException
 
 @Serializable
 internal data class NetworkConfig(
@@ -19,9 +22,10 @@ internal data class NetworkConfig(
             for (s in cdn) {
                 NetworkServiceFactory.logger.info("trying CDN ${s.base}")
                 try {
-                    val about = URL(s.base).readText()
+                    val about = readText(s.base)
+                    NetworkServiceFactory.json.parseToJsonElement(about)
                     return about to s
-                } catch (cause: ConnectException) {
+                } catch (cause: Exception) {
                     NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用，下次重载配置前将不连接该 CDN. ${cause.message}")
                     cdnList.removeIf { it.base == s.base }
                 }
@@ -29,9 +33,10 @@ internal data class NetworkConfig(
         }
         NetworkServiceFactory.logger.info("trying Main Server ${main.base}")
         try {
-            val about = URL(main.base).readText()
+            val about = readText(main.base)
+            NetworkServiceFactory.json.parseToJsonElement(about)
             return about to main
-        } catch (cause: ConnectException) {
+        } catch (cause: Exception) {
             NetworkServiceFactory.logger.warning("trpgbot Main by ${main.base} 暂不可用 ${cause.message}")
             if (tryCdnFirst) {
                 throw RuntimeException("请检查 trpgbot 的可用性")
@@ -40,14 +45,20 @@ internal data class NetworkConfig(
         for (s in cdn) {
             NetworkServiceFactory.logger.info("trying CDN ${s.base}")
             try {
-                val about = URL(s.base).readText()
+                val about = readText(s.base)
+                NetworkServiceFactory.json.parseToJsonElement(about)
                 return about to s
-            } catch (cause: ConnectException) {
-                NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用，下次重载配置前将不连接该 CDN ${cause.message}")
+            } catch (cause: Exception) {
+                NetworkServiceFactory.logger.warning("trpgbot CDN by ${s.base} 暂不可用，下次重载配置前将不连接该 CDN. ${cause.message}")
                 cdnList.removeIf { it.base == s.base }
             }
         }
         throw RuntimeException("请检查 trpgbot 的可用性")
+    }
+    private fun readText(url: String): String {
+        val conn = URL(url).openConnection()
+        NetworkServiceFactory.headers.forEach(conn::setRequestProperty)
+        return conn.getInputStream().use { it.readBytes().toString(Charsets.UTF_8) }
     }
 }
 @Serializable

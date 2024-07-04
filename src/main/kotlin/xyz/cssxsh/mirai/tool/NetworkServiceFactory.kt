@@ -10,9 +10,12 @@ import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
+import org.asynchttpclient.DefaultAsyncHttpClientConfig
+import org.asynchttpclient.Dsl
 import java.io.File
 import java.net.ConnectException
 import java.net.URL
+import java.time.Duration
 
 public class NetworkServiceFactory(
     private val config: File
@@ -30,6 +33,23 @@ public class NetworkServiceFactory(
             ignoreUnknownKeys = true
             prettyPrint = true
         }
+        internal val userAgent by lazy {
+            val ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0"
+            runCatching {
+                @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+                val ver = net.mamoe.mirai.console.internal.MiraiConsoleBuildConstants.versionConst
+                "$ua mirai/$ver"
+            }.getOrElse { ua }
+        }
+
+        internal val client = Dsl.asyncHttpClient(
+            DefaultAsyncHttpClientConfig.Builder()
+                .setKeepAlive(true)
+                .setUserAgent(userAgent)
+                .setRequestTimeout(Duration.ofSeconds(30))
+                .setConnectTimeout(Duration.ofSeconds(30))
+                .setReadTimeout(Duration.ofSeconds(30))
+        )
 
         public val inst: NetworkServiceFactory?
             @Suppress("INVISIBLE_MEMBER")
@@ -37,7 +57,9 @@ public class NetworkServiceFactory(
 
         @JvmStatic
         internal val logger: MiraiLogger = MiraiLogger.Factory.create(NetworkServiceFactory::class)
-
+        internal val headers = mapOf(
+            "User-Agent" to userAgent
+        )
         @JvmStatic
         public fun install() {
             Services.register(
@@ -56,8 +78,8 @@ public class NetworkServiceFactory(
                 "main": { "base_url": "https://qsign.trpgbot.com", "key": "miraibbs" },
                 "try_cdn_first": false,
                 "cdn": [
-                    { "base_url": "https://qsign.chahuyun.cn", "key": "selfshare" },
                     { "base_url": "http://sbtx.f3.ttvt.cc", "key": "selfshare" },
+                    { "base_url": "https://qsign.chahuyun.cn", "key": "selfshare" },
                     { "base_url": "http://qsign-v3.trpgbot.com", "key": "selfshare" }
                 ]
             }
