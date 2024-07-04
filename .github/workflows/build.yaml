@@ -23,42 +23,6 @@ jobs:
           distribution: 'adopt'
           java-version: '11'
 
-      - name: JNI Download For Windows
-        uses: bettermarks/action-artifact-download@0.3.0
-        with:
-          repo: cssxsh/t544_enc
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifact_name: push-build-windows
-
-      - name: JNI Download For Linux
-        uses: bettermarks/action-artifact-download@0.3.0
-        with:
-          repo: cssxsh/t544_enc
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifact_name: push-build-linux
-
-      - name: JNI Download For Android
-        uses: bettermarks/action-artifact-download@0.3.0
-        with:
-          repo: cssxsh/t544_enc
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifact_name: push-build-android
-
-      - name: JNI Download For MacOS
-        uses: bettermarks/action-artifact-download@0.3.0
-        with:
-          repo: cssxsh/t544_enc
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifact_name: push-build-macos
-
-      - name: Unzip Artifact
-        run: |
-          mkdir -p src/main/resources/xyz/cssxsh/mirai/tool
-          unzip push-build-windows -d src/main/resources/xyz/cssxsh/mirai/tool
-          unzip push-build-linux -d src/main/resources/xyz/cssxsh/mirai/tool
-          unzip push-build-android -d src/main/resources/xyz/cssxsh/mirai/tool
-          unzip push-build-macos -d src/main/resources/xyz/cssxsh/mirai/tool
-
       - name: chmod -R 777 gradlew
         run: chmod -R 777 gradlew
 
