@@ -57,6 +57,8 @@ internal data class NetworkConfig(
     }
     private fun readText(url: String): String {
         val conn = URL(url).openConnection()
+        conn.connectTimeout = 30 * 1000
+        conn.readTimeout = 30 * 1000
         NetworkServiceFactory.headers.forEach(conn::setRequestProperty)
         return conn.getInputStream().use { it.readBytes().toString(Charsets.UTF_8) }
     }
