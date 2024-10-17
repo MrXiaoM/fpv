@@ -56,7 +56,7 @@ public class NetworkServiceFactory(
             get() = EncryptService.Companion.factory as? NetworkServiceFactory
 
         @JvmStatic
-        internal val logger: MiraiLogger = MiraiLogger.Factory.create(NetworkServiceFactory::class)
+        internal val logger: MiraiLogger = MiraiLogger.Factory.create(NetworkServiceFactory::class, "trpgbot.factory")
         internal val headers = mapOf(
             "User-Agent" to userAgent
         )
@@ -287,7 +287,7 @@ public class NetworkServiceFactory(
         about: String
     ) {
         try {
-            logger.info("trpgbot from ${server.base} about \n" + about)
+            logger.info("trpgbot from ${server.base} 测试连接成功 \n" + about)
             when {
                 version !in about -> {
                     throw IllegalStateException("trpgbot by ${server.base} 与协议 ${protocol}(${version}) 似乎不匹配")
@@ -307,6 +307,6 @@ public class NetworkServiceFactory(
     }
 
     override fun toString(): String {
-        return "NetworkServiceFactory(config=${config.toPath().toUri()})"
+        return "trpgbot.NetworkServiceFactory(config=${config.toPath().toUri()})"
     }
 }

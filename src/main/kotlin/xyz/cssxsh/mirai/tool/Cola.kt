@@ -24,7 +24,7 @@ internal data class NetworkConfig(
         val cdn = cdnList.toList()
         if (tryCdnFirst) {
             for (s in cdn) {
-                NetworkServiceFactory.logger.info("trying CDN ${s.base}")
+                NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
                 try {
                     val about = readText(s.base)
                     NetworkServiceFactory.json.parseToJsonElement(about)
@@ -35,19 +35,19 @@ internal data class NetworkConfig(
                 }
             }
         }
-        NetworkServiceFactory.logger.info("trying Main Server ${main.base}")
+        NetworkServiceFactory.logger.info("正在尝试连接 主服务器 ${main.base}")
         try {
             val about = readText(main.base)
             NetworkServiceFactory.json.parseToJsonElement(about)
             return about to main
         } catch (cause: Exception) {
-            NetworkServiceFactory.logger.warning("trpgbot Main by ${main.base} 暂不可用 ${cause.message}")
+            NetworkServiceFactory.logger.warning("trpgbot 主服务器 by ${main.base} 暂不可用 ${cause.message}")
             if (tryCdnFirst) {
                 throw RuntimeException("请检查 trpgbot 的可用性")
             }
         }
         for (s in cdn) {
-            NetworkServiceFactory.logger.info("trying CDN ${s.base}")
+            NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
             try {
                 val about = readText(s.base)
                 NetworkServiceFactory.json.parseToJsonElement(about)

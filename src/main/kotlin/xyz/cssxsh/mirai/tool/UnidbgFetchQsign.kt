@@ -290,7 +290,7 @@ public class UnidbgFetchQsign(
         )
 
         @JvmStatic
-        internal val logger: MiraiLogger = MiraiLogger.Factory.create(UnidbgFetchQsign::class)
+        internal val logger: MiraiLogger = MiraiLogger.Factory.create(UnidbgFetchQsign::class, "trpgbot.sign")
 
         @JvmStatic
         public val REQUEST_TOKEN_INTERVAL: String = "xyz.cssxsh.mirai.tool.UnidbgFetchQsign.token.interval"
