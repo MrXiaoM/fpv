@@ -75,12 +75,12 @@ public class NetworkServiceFactory(
         @JvmStatic
         public val DEFAULT_CONFIG: String = """
             {
+                "protocol_source": "MrXiaoM/protocol-versions",
                 "main": { "base_url": "https://qsign.trpgbot.com", "key": "miraibbs" },
                 "try_cdn_first": true,
                 "cdn": [
-                    { "base_url": "https://qsign-v4.trpgbot.com", "key": "miraibbs" },
+                    { "base_url": "https://zyr15r-astralqsign.hf.space", "key": "selfshare" },
                     { "base_url": "https://qsign.chahuyun.cn", "key": "selfshare" },
-                    { "base_url": "http://qsign.w1.luyouxia.net", key: "miraibbs" },
                     { "base_url": "http://qsign-v3.trpgbot.com", "key": "selfshare" }
                 ]
             }
@@ -100,7 +100,8 @@ public class NetworkServiceFactory(
             if (exists().not()) {
                 writeText(DEFAULT_CONFIG)
             }
-            networkConfig = Json.decodeFromString(NetworkConfig.serializer(), readText())
+            networkConfig = json.decodeFromString(NetworkConfig.serializer(), readText())
+            FixProtocolVersion.protocolSource = networkConfig.protocolSource
         }
     }
 

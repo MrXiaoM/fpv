@@ -9,6 +9,8 @@ import javax.net.ssl.SSLException
 
 @Serializable
 internal data class NetworkConfig(
+    @SerialName("protocol_source")
+    val protocolSource: String = "MrXiaoM/protocol-versions",
     @SerialName("main")
     val main: Cola,
     @SerialName("try_cdn_first")
