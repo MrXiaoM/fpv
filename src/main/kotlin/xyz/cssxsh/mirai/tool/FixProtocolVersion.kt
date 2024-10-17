@@ -7,6 +7,7 @@ import net.mamoe.mirai.utils.*
 import java.io.*
 import java.net.*
 import java.time.*
+import java.util.function.Function
 
 @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 public object FixProtocolVersion {
@@ -267,7 +268,12 @@ public object FixProtocolVersion {
     public fun sync(protocol: BotConfiguration.MiraiProtocol): Unit = fetch(protocol = protocol, version = "latest")
 
     @JvmStatic
-    public val FETCH_SOURCE_PROPERTY: String = "xyz.cssxsh.mirai.tool.FixProtocolVersion.source"
+    public var protocolSource: String = "MrXiaoM/protocol-versions"
+
+    @JvmStatic
+    public var githubMirror: Function<String, String> = Function<String, String> { url ->
+        return@Function "https://ghp.ci/$url"
+    }
 
     /**
      * 从 [RomiChan/protocol-versions](https://github.com/RomiChan/protocol-versions) 获取指定版本协议
@@ -302,25 +308,24 @@ public object FixProtocolVersion {
      */
     @JvmStatic
     public fun fetchWithResult(protocol: BotConfiguration.MiraiProtocol, version: String): JsonObject {
-        val source = System.getProperty(FETCH_SOURCE_PROPERTY, "MrXiaoM")
         val url = when (protocol) {
             BotConfiguration.MiraiProtocol.ANDROID_PHONE -> {
                 when (version) {
-                    "", "latest" -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_phone.json")
-                    else -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_phone/${version}.json")
+                    "", "latest" -> "https://raw.githubusercontent.com/${protocolSource}/master/android_phone.json"
+                    else -> "https://raw.githubusercontent.com/${protocolSource}/master/android_phone/${version}.json"
                 }
             }
             BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
                 when (version) {
-                    "", "latest" -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_pad.json")
-                    else -> URL("https://raw.githubusercontent.com/${source}/protocol-versions/master/android_pad/${version}.json")
+                    "", "latest" -> "https://raw.githubusercontent.com/${protocolSource}/master/android_pad.json"
+                    else -> "https://raw.githubusercontent.com/${protocolSource}/master/android_pad/${version}.json"
                 }
             }
             else -> throw IllegalArgumentException("不支持同步的协议: ${protocol.name}")
         }
 
         val json: JsonObject = kotlin.runCatching {
-            url.openConnection()
+            URL(url).openConnection()
                 .apply {
                     connectTimeout = 30_000
                     readTimeout = 30_000
@@ -329,7 +334,7 @@ public object FixProtocolVersion {
                 .decodeToString()
         }.recoverCatching { throwable ->
             try {
-                URL("https://mirror.ghproxy.com/$url").openConnection()
+                URL(githubMirror.apply(url)).openConnection()
                     .apply {
                         connectTimeout = 30_000
                         readTimeout = 30_000
@@ -337,7 +342,7 @@ public object FixProtocolVersion {
                     .getInputStream().use { it.readBytes() }
                     .decodeToString()
             } catch (cause: Throwable) {
-                val exception = throwable.cause as? java.net.UnknownHostException ?: throwable
+                val exception = throwable.findUnknownHostCause()
                 exception.addSuppressed(cause)
                 throw exception
             }
@@ -354,6 +359,11 @@ public object FixProtocolVersion {
 
         store(protocol, json)
         return json
+    }
+
+    public fun Throwable.findUnknownHostCause(): Throwable {
+        // 不要删除 `java.net.`，会导致编译失败
+        return cause as? java.net.UnknownHostException ?: this
     }
 
     @JvmStatic
