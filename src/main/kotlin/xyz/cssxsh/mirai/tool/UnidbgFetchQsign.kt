@@ -14,10 +14,14 @@ import java.time.Duration
 import kotlin.coroutines.*
 
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
-import java.util.concurrent.ExecutionException
 
-public class UnidbgFetchQsign(private val server: String, private val key: String, coroutineContext: CoroutineContext) :
-    EncryptService, CoroutineScope {
+public class UnidbgFetchQsign(
+    private val server: String,
+    private val key: String,
+    private val ver: String,
+    private val qua: String,
+    coroutineContext: CoroutineContext
+): EncryptService, CoroutineScope {
 
     override val coroutineContext: CoroutineContext =
         coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { context, exception ->
@@ -90,6 +94,8 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
         val response = client.prepareGet("${server}/register")
             .applyHeader()
             .addQueryParam("uin", uin.toString())
+            .addQueryParam("ver", ver)
+            .addQueryParam("qua", qua)
             .addQueryParam("android_id", androidId)
             .addQueryParam("guid", guid)
             .addQueryParam("qimei36", qimei36)
@@ -105,6 +111,8 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
         val response = client.prepareGet("${server}/destroy")
             .applyHeader()
             .addQueryParam("uin", uin.toString())
+            .addQueryParam("ver", ver)
+            .addQueryParam("qua", qua)
             .addQueryParam("key", key)
             .execute().get()
         if (response.statusCode == 404) return
@@ -141,6 +149,8 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
         val response = client.prepareGet("${server}/custom_energy")
             .applyHeader()
             .addQueryParam("uin", uin.toString())
+            .addQueryParam("ver", ver)
+            .addQueryParam("qua", qua)
             .addQueryParam("salt", salt.toUHexString(""))
             .addQueryParam("data", data)
             .execute().get()
@@ -196,6 +206,8 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
         val response = client.preparePost("${server}/sign")
             .applyHeader()
             .addFormParam("uin", uin.toString())
+            .addFormParam("ver", ver)
+            .addFormParam("qua", qua)
             .addFormParam("cmd", cmd)
             .addFormParam("seq", seq.toString())
             .addFormParam("buffer", buffer.toUHexString(""))
@@ -212,6 +224,8 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
         val response = client.prepareGet("${server}/request_token")
             .applyHeader()
             .addQueryParam("uin", uin.toString())
+            .addQueryParam("ver", ver)
+            .addQueryParam("qua", qua)
             .execute().get()
         val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
@@ -225,6 +239,8 @@ public class UnidbgFetchQsign(private val server: String, private val key: Strin
         val response = client.prepareGet("${server}/submit")
             .applyHeader()
             .addQueryParam("uin", uin.toString())
+            .addQueryParam("ver", ver)
+            .addQueryParam("qua", qua)
             .addQueryParam("cmd", cmd)
             .addQueryParam("callback_id", callbackId.toString())
             .addQueryParam("buffer", buffer.toUHexString(""))

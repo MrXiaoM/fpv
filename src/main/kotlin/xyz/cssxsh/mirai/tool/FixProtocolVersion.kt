@@ -34,6 +34,8 @@ public object FixProtocolVersion {
         }
     }
 
+    internal val qua: MutableMap<BotConfiguration.MiraiProtocol, String> = mutableMapOf()
+
     @PublishedApi
     internal fun <T> MiraiProtocolInternal.field(name: String, default: T): T {
         @Suppress("UNCHECKED_CAST")
@@ -396,6 +398,7 @@ public object FixProtocolVersion {
     @JvmStatic
     private fun store(protocol: BotConfiguration.MiraiProtocol, json: JsonObject) {
         check(json.getValue("app_id").jsonPrimitive.long != 0L) { "载入的 ${protocol.name.lowercase()}.json 有误" }
+        qua[protocol] = json.getValue("qua").jsonPrimitive.content
         protocols.compute(protocol) { _, impl ->
             when {
                 null == impl -> null

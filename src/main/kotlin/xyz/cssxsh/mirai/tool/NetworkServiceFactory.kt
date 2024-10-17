@@ -117,7 +117,9 @@ public class NetworkServiceFactory(
         } catch (cause: NoClassDefFoundError) {
             throw RuntimeException("请参照 https://search.maven.org/artifact/org.asynchttpclient/async-http-client/3.0.0.Beta2/jar 添加依赖", cause)
         }
-        return when (val protocol = context.extraArgs[EncryptServiceContext.KEY_BOT_PROTOCOL]) {
+        val protocol = context.extraArgs[EncryptServiceContext.KEY_BOT_PROTOCOL]
+        val qua = FixProtocolVersion.qua[protocol] ?: throw UnsupportedOperationException("协议 $protocol 未提供 qua")
+        return when (protocol) {
             BotConfiguration.MiraiProtocol.ANDROID_PHONE, BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
                 @Suppress("INVISIBLE_MEMBER")
                 val version = MiraiProtocolInternal[protocol].ver
@@ -134,6 +136,8 @@ public class NetworkServiceFactory(
                 UnidbgFetchQsign(
                     server = server.base,
                     key = server.key,
+                    ver = version,
+                    qua = qua,
                     coroutineContext = serviceSubScope.coroutineContext
                 )
             }
