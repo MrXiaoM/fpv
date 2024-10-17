@@ -11,6 +11,8 @@ import javax.net.ssl.SSLException
 internal data class NetworkConfig(
     @SerialName("protocol_source")
     val protocolSource: String = "MrXiaoM/protocol-versions",
+    @SerialName("protocol_version")
+    val protocolVersion: String = "latest",
     @SerialName("main")
     val main: Cola,
     @SerialName("try_cdn_first")

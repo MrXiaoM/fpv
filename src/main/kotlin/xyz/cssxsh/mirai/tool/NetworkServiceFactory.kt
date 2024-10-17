@@ -76,6 +76,7 @@ public class NetworkServiceFactory(
         public val DEFAULT_CONFIG: String = """
             {
                 "protocol_source": "MrXiaoM/protocol-versions",
+                "protocol_version": "latest",
                 "main": { "base_url": "https://qsign.trpgbot.com", "key": "miraibbs" },
                 "try_cdn_first": true,
                 "cdn": [
@@ -147,6 +148,14 @@ public class NetworkServiceFactory(
         }
     }
 
+    @Serializable
+    public data class GithubFile(
+        @SerialName("name")
+        val name: String,
+        @SerialName("type")
+        val type: String
+    )
+
     @Suppress("INVISIBLE_MEMBER")
     internal fun checkProtocolUpdate(
         protocol: BotConfiguration.MiraiProtocol,
@@ -163,10 +172,61 @@ public class NetworkServiceFactory(
                 ""
             }
         }.getOrElse { "" }
+        val supportVer: List<String> = runCatching {
+            val jsonData = data.jsonObject["data"]!!.jsonObject
+            mutableListOf<String>().apply {
+                if (jsonData.containsKey("support")) {
+                    for (element in jsonData["support"]!!.jsonArray) {
+                        if (element is JsonPrimitive) {
+                            add(element.content)
+                        }
+                    }
+                }
+                sort()
+                reverse()
+            }
+        }.getOrElse { listOf() }
 
-        if (targetVer.isEmpty()) logger.warning("无法从 trpgbot 回应中获得协议版本，放弃自动更换版本")
+        val repoVer: List<String> = kotlin.runCatching {
+            URL("https://api.github.com/repos/${FixProtocolVersion.protocolSource}/contents/${protocol.name.lowercase()}").openConnection()
+                .apply {
+                    connectTimeout = 30_000
+                    readTimeout = 30_000
+                }
+                .getInputStream().use { it.readBytes() }
+                .decodeToString()
+        }.fold(
+            onSuccess = { text ->
+                val element = json.parseToJsonElement(text)
+                if (element !is JsonArray) throw IllegalStateException("仓库 ${FixProtocolVersion.protocolSource} 中没有提供 ${protocol.name} 的协议信息")
+                element.jsonArray
+                    .map<JsonElement, GithubFile> { json.decodeFromJsonElement(it) }
+                    .filter { it.type == "file" }
+                    .map { it.name.removeSuffix(".json") }
+            },
+            onFailure = { cause ->
+                throw IllegalStateException("从仓库 ${FixProtocolVersion.protocolSource} 获取协议列表失败", cause)
+            }
+        )
+
+        val ver = run {
+            val latest = networkConfig.protocolVersion.equals("latest", true)
+            val versions = repoVer.filter { supportVer.contains(it) || (targetVer.isNotEmpty() && targetVer == it) }
+            // 如果版本列表为空，返回空版本
+            if (versions.isEmpty()) ""
+            // 如果设定版本不是最新版本，且仓库中有，或本地有，使用该版本
+            else if (!latest && !versions.contains(networkConfig.protocolVersion)) networkConfig.protocolVersion
+            else if (!latest && File(protocolsFolder, "${protocol.name.lowercase()}_${networkConfig.protocolVersion}.json").exists()) networkConfig.protocolVersion
+            // 如果设定版本为最新版本，或者仓库中没有
+            // 如果 targetVer 存在，使用 targetVer
+            else if (targetVer.isNotEmpty()) targetVer
+            // 如果 targetVer 不存在，使用仓库中最新版本
+            else versions.maxOf { it }
+        }
+
+        if (ver.isEmpty()) logger.warning("无法从 trpgbot 回应中获得协议版本，放弃自动更换版本")
         else {
-            val file = File(protocolsFolder, "${protocol.name.lowercase()}_$targetVer.json")
+            val file = File(protocolsFolder, "${protocol.name.lowercase()}_$ver.json")
 
             try {
                 if (file.exists()) {
@@ -175,7 +235,7 @@ public class NetworkServiceFactory(
                     logger.info("已将 $protocol 从本地配置自动升级至 $buildVer")
                 } else {
                     val result = runCatching {
-                        FixProtocolVersion.fetchWithResult(protocol, targetVer)
+                        FixProtocolVersion.fetchWithResult(protocol, ver)
                     }.fold(
                         onSuccess = { it },
                         onFailure = {
