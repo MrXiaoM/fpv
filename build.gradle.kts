@@ -3,26 +3,13 @@ plugins {
     kotlin("plugin.serialization") version "1.8.22"
 
     id("net.mamoe.mirai-console") version "2.16.0"
-    id("me.him188.maven-central-publish") version "1.0.0-dev-3"
 }
 
 group = "xyz.cssxsh.mirai"
 version = "1.13.2"
 
-mavenCentralPublish {
-    useCentralS01()
-    singleDevGithubProject("cssxsh", "fix-protocol-version")
-    licenseFromGitHubProject("AGPL-3.0")
-    workingDir = System.getenv("PUBLICATION_TEMP")?.let { file(it).resolve(projectName) }
-        ?: buildDir.resolve("publishing-tmp")
-    publication {
-        artifact(tasks["buildPlugin"])
-    }
-}
-
 repositories {
     mavenCentral()
-    maven("https://repo.mirai.mamoe.net/snapshots")
 }
 
 dependencies {
