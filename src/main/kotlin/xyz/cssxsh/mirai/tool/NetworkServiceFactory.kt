@@ -3,19 +3,12 @@ package xyz.cssxsh.mirai.tool
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
-import net.mamoe.mirai.console.command.ConsoleCommandSender
-import net.mamoe.mirai.console.command.SystemCommandSender
-import net.mamoe.mirai.console.util.AnsiMessageBuilder
-import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
-import org.asynchttpclient.DefaultAsyncHttpClientConfig
-import org.asynchttpclient.Dsl
 import java.io.File
 import java.net.ConnectException
 import java.net.URL
-import java.time.Duration
 
 public class NetworkServiceFactory(
     private val config: File
@@ -41,15 +34,6 @@ public class NetworkServiceFactory(
                 "$ua mirai/$ver"
             }.getOrElse { ua }
         }
-
-        internal val client = Dsl.asyncHttpClient(
-            DefaultAsyncHttpClientConfig.Builder()
-                .setKeepAlive(true)
-                .setUserAgent(userAgent)
-                .setRequestTimeout(Duration.ofSeconds(30))
-                .setConnectTimeout(Duration.ofSeconds(30))
-                .setReadTimeout(Duration.ofSeconds(30))
-        )
 
         public val inst: NetworkServiceFactory?
             @Suppress("INVISIBLE_MEMBER")
@@ -290,9 +274,13 @@ public class NetworkServiceFactory(
             logger.info("trpgbot from ${server.base} 测试连接成功 \n" + about)
             when {
                 version !in about -> {
-                    throw IllegalStateException("trpgbot by ${server.base} 与协议 ${protocol}(${version}) 似乎不匹配")
+                    val extra = when (protocol) {
+                        BotConfiguration.MiraiProtocol.ANDROID_PAD -> "。"
+                        else -> "，本插件自动拉取签名服务器支持的协议版本到 ANDROID_PAD 并自动升级协议版本，如果你不会手动升级协议版本，请使用 ANDROID_PAD 协议登录。"
+                    }
+                    throw IllegalStateException("trpgbot by ${server.base} 与协议 ${protocol}(${version}) 似乎不匹配$extra")
                 }
-                "IAA" !in about -> {
+                "赵怡然" !in about -> {
                     logger.error("请确认服务类型为 trpgbot")
                 }
             }

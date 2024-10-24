@@ -1,9 +1,13 @@
 package xyz.cssxsh.mirai.tool
 
+import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.console.command.CommandManager.INSTANCE.register
 import net.mamoe.mirai.console.command.CommandManager.INSTANCE.unregister
+import net.mamoe.mirai.console.command.ConsoleCommandSender
 import net.mamoe.mirai.console.extension.*
 import net.mamoe.mirai.console.plugin.jvm.*
+import net.mamoe.mirai.console.util.AnsiMessageBuilder
+import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.utils.*
 import java.io.File
 
@@ -55,17 +59,33 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
     }
 
     override fun onEnable() {
-        logger.info {
-            buildString {
-                appendLine("当前各登录协议版本日期: ")
-                for ((_, info) in FixProtocolVersion.info()) {
-                    appendLine(info)
+        runBlocking {
+            logger.info {
+                buildString {
+                    appendLine("当前各登录协议版本日期: ")
+                    for ((_, info) in FixProtocolVersion.info()) {
+                        appendLine(info)
+                    }
+                    appendLine()
                 }
-                appendLine()
-                appendLine("请使用 ANDROID_PAD 协议登录")
             }
+            ConsoleCommandSender.sendAnsiMessage {
+                val support = AnsiMessageBuilder.isAnsiSupported(ConsoleCommandSender)
+                val escape = '\u001b'
+                append("        ")
+                if (support) append("$escape[1;91m")
+                append(" !!! ")
+                reset().append(" ")
+                if (support) append("$escape[1;93;45m")
+                append("  请使用 ANDROID_PAD 协议  ")
+                reset().append(" ")
+                if (support) append("$escape[1;91m")
+                append(" !!! ").reset()
+                appendLine().append("            ").append("如需使用其他协议，请手动升级协议版本")
+                appendLine().appendLine()
+            }
+            FixProtocolVersionCommand.register()
         }
-        FixProtocolVersionCommand.register()
     }
 
     override fun onDisable() {
