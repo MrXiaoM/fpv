@@ -1,11 +1,8 @@
 package xyz.cssxsh.mirai.tool
 
-import kotlinx.serialization.*
-import java.io.IOException
-import java.net.ConnectException
-import java.net.HttpURLConnection
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import java.net.URL
-import javax.net.ssl.SSLException
 
 @Serializable
 internal data class NetworkConfig(
@@ -20,13 +17,13 @@ internal data class NetworkConfig(
     @SerialName("cdn")
     val cdnList: MutableList<Cola>,
 ) {
-    fun tryServers(): Pair<String, Cola> {
+    fun tryServers(startup: Boolean = false): Pair<String, Cola> {
         val cdn = cdnList.toList()
         if (tryCdnFirst) {
             for (s in cdn) {
                 NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
                 try {
-                    val about = readText(s.base)
+                    val about = readText(s.base, startup)
                     NetworkServiceFactory.json.parseToJsonElement(about)
                     return about to s
                 } catch (cause: Exception) {
@@ -37,7 +34,7 @@ internal data class NetworkConfig(
         }
         NetworkServiceFactory.logger.info("正在尝试连接 主服务器 ${main.base}")
         try {
-            val about = readText(main.base)
+            val about = readText(main.base, startup)
             NetworkServiceFactory.json.parseToJsonElement(about)
             return about to main
         } catch (cause: Exception) {
@@ -49,7 +46,7 @@ internal data class NetworkConfig(
         for (s in cdn) {
             NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
             try {
-                val about = readText(s.base)
+                val about = readText(s.base, startup)
                 NetworkServiceFactory.json.parseToJsonElement(about)
                 return about to s
             } catch (cause: Exception) {
@@ -59,11 +56,12 @@ internal data class NetworkConfig(
         }
         throw RuntimeException("请检查 trpgbot 的可用性")
     }
-    private fun readText(url: String): String {
+    private fun readText(url: String, startup: Boolean): String {
         val conn = URL(url).openConnection()
         conn.connectTimeout = 30 * 1000
         conn.readTimeout = 30 * 1000
         NetworkServiceFactory.headers.forEach(conn::setRequestProperty)
+        if (startup) conn.setRequestProperty("X-Mirai-Startup", "!0");
         return conn.getInputStream().use { it.readBytes().toString(Charsets.UTF_8) }
     }
 }

@@ -48,7 +48,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
             val factory = NetworkServiceFactory.inst ?: throw IllegalStateException("当前使用的签名服务并非 trpgbot")
             logger.info("正在检查可用的签名服务器")
 
-            val (about, _) = factory.networkConfig.tryServers()
+            val (about, _) = factory.networkConfig.tryServers(true)
             factory.checkProtocolUpdate(BotConfiguration.MiraiProtocol.ANDROID_PAD, about)
 
         } catch (_: NoClassDefFoundError) {
