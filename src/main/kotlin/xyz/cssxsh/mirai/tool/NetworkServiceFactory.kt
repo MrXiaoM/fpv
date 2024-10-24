@@ -3,6 +3,9 @@ package xyz.cssxsh.mirai.tool
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
+import net.mamoe.mirai.console.command.ConsoleCommandSender
+import net.mamoe.mirai.console.util.AnsiMessageBuilder
+import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
@@ -271,7 +274,20 @@ public class NetworkServiceFactory(
         about: String
     ) {
         try {
-            logger.info("trpgbot from ${server.base} 测试连接成功 \n" + about)
+            val json = Json.parseToJsonElement(about) as? JsonObject ?: buildJsonObject {  }
+            val msg = json["msg"]?.jsonPrimitive?.content
+            logger.info("trpgbot from ${server.base} 测试连接成功 \n" + JsonObject(json.filterNot { it.key == "msg" }))
+            if (msg != null) runBlocking {
+                ConsoleCommandSender.sendAnsiMessage {
+                    appendLine()
+                    for (line in msg.split(Regex("###|\n"))) {
+                        lightBlue().append("  ").append(line.trim()).reset().appendLine()
+                    }
+                    appendLine()
+                }
+            }
+
+            runBlocking {  }
             when {
                 version !in about -> {
                     val extra = when (protocol) {
