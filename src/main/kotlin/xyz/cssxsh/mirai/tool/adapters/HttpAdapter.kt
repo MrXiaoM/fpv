@@ -1,7 +1,6 @@
 package xyz.cssxsh.mirai.tool.adapters
 
 import kotlinx.serialization.builtins.*
-import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.utils.*
 import org.asynchttpclient.*
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory
@@ -16,7 +15,7 @@ public class QsignHttpAdapter(
     private val ver: String,
     private val qua: String,
     coroutineContext: CoroutineContext
-): AbstractAdapter(server, coroutineContext) {
+): AbstractAdapter(server, logger, coroutineContext) {
 
     private val client = Dsl.asyncHttpClient(
         DefaultAsyncHttpClientConfig.Builder()

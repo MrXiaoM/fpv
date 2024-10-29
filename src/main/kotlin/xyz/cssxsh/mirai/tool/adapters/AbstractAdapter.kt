@@ -20,6 +20,7 @@ public typealias JavaAtomicLong = java.util.concurrent.atomic.AtomicLong
 
 public abstract class AbstractAdapter(
     private val serverName: String,
+    private val logger: MiraiLogger,
     coroutineContext: CoroutineContext
 ): CoroutineScope, EncryptService {
 
@@ -137,7 +138,7 @@ public abstract class AbstractAdapter(
         val qimei36 = context.extraArgs[EncryptServiceContext.KEY_QIMEI36]
         val channel = context.extraArgs[EncryptServiceContext.KEY_CHANNEL_PROXY]
 
-        QsignWebSocketAdapter.logger.info("Bot(${context.id}) initialize by $serverName")
+        logger.info("Bot(${context.id}) initialize by $serverName")
 
         initialize(context.id, device, qimei36, channel)
     }
@@ -183,9 +184,6 @@ public abstract class AbstractAdapter(
             "Uin is not registered.",
             "First use must be submitted with android_id and guid."
         )
-
-        @JvmStatic
-        internal val logger: MiraiLogger = MiraiLogger.Factory.create(AbstractAdapter::class, "trpgbot.adapter")
 
         @JvmStatic
         public val REQUEST_TOKEN_INTERVAL: String = "xyz.cssxsh.mirai.tool.UnidbgFetchQsign.token.interval"

@@ -1,6 +1,5 @@
 package xyz.cssxsh.mirai.tool.adapters
 
-import kotlinx.coroutines.*
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.*
@@ -15,7 +14,7 @@ public class QsignWebSocketAdapter(
     private val qua: String,
     public val client: Client,
     coroutineContext: CoroutineContext,
-): AbstractAdapter(server, coroutineContext) {
+): AbstractAdapter(server, logger, coroutineContext) {
 
     private fun params(block: JsonObjectBuilder.() -> Unit): JsonObject = buildJsonObject {
         put("qua", qua)
