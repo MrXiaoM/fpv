@@ -4,11 +4,11 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import net.mamoe.mirai.console.command.ConsoleCommandSender
-import net.mamoe.mirai.console.util.AnsiMessageBuilder
 import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
+import xyz.cssxsh.mirai.tool.adapters.QsignHttpAdapter
 import java.io.File
 import java.net.ConnectException
 import java.net.URL
@@ -121,7 +121,7 @@ public class NetworkServiceFactory(
 
                 checkSignServerAvailability(protocol, version, server, about)
 
-                UnidbgFetchQsign(
+                QsignHttpAdapter(
                     server = server.base,
                     key = server.key,
                     ver = version,
