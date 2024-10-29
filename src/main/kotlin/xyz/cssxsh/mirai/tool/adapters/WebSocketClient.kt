@@ -8,8 +8,11 @@ import org.java_websocket.handshake.ServerHandshake
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory
 import xyz.cssxsh.mirai.tool.adapters.QsignWebSocketAdapter.Companion.logger
 import java.net.URI
+import java.util.Timer
+import java.util.TimerTask
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.timerTask
 
 public class Client(
     server: String,
@@ -28,7 +31,23 @@ public class Client(
         invokeOnCompletion(
             onCancelling = true,
             invokeImmediately = true
-        ) { close() }
+        ) {
+            close()
+            task?.cancel()
+        }
+    }
+    private val timer = Timer()
+    private var task: TimerTask? = null
+    public fun ping() {
+        val echo = echos.getAndIncrement().toString()
+        val future = CompletableFuture<JsonObject>()
+        futureMap[echo] = future
+        val json = buildJsonObject {
+            put("type", "ping")
+            put("params", buildJsonObject {  })
+            put("echo", echo)
+        }.toString()
+        send(json)
     }
     public suspend fun connectSuspend(): Boolean {
         if (super.connectBlocking()) return true
@@ -36,6 +55,11 @@ public class Client(
     }
     override fun onOpen(handshakedata: ServerHandshake) {
         logger.info("已连接到签名服务器")
+        task?.cancel()
+        task = timerTask {
+            if (isOpen) ping()
+        }
+        timer.schedule(task, 15_000L, 30_000L)
     }
     override fun connect() {
         scheduleClose = false
@@ -71,6 +95,7 @@ public class Client(
         }
     }
     override fun onClose(code: Int, reason: String, remote: Boolean) {
+        task?.cancel()
         logger.info("签名服务器连接因 ${reason.ifEmpty { "未知原因" }} 已关闭 (关闭码: $code)")
         // 自动重连
         if (!scheduleClose) retry()
@@ -116,7 +141,7 @@ public class Client(
         public val connectionPool: MutableMap<String, Client> = mutableMapOf()
 
         public suspend fun connect(server: String, parentJob: Job?, scope: CoroutineScope): Client {
-            val conn = connectionPool[server] ?: Client(server, parentJob, scope)
+            val conn = connectionPool[server] ?: Client(server, parentJob, scope).also { connectionPool[server] = it }
             if (!conn.isOpen) {
                 conn.connectSuspend()
             }
