@@ -10,6 +10,7 @@ import net.mamoe.mirai.Bot
 import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.internal.spi.EncryptService
+import net.mamoe.mirai.internal.spi.EncryptServiceContext
 import net.mamoe.mirai.utils.*
 import xyz.cssxsh.mirai.tool.NetworkServiceStateException
 import kotlin.coroutines.CoroutineContext
@@ -17,8 +18,9 @@ import kotlin.coroutines.CoroutineContext
 public typealias JavaAtomicLong = java.util.concurrent.atomic.AtomicLong
 
 public abstract class AbstractAdapter(
+    private val serverName: String,
     coroutineContext: CoroutineContext
-): CoroutineScope {
+): CoroutineScope, EncryptService {
 
     override val coroutineContext: CoroutineContext =
         coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { context, exception ->
@@ -41,10 +43,9 @@ public abstract class AbstractAdapter(
 
     protected val token: JavaAtomicLong = JavaAtomicLong(0)
 
-    protected fun initialize(id: Long, device: DeviceInfo, qimei36: String, channel: EncryptService.ChannelProxy) {
+    protected fun initialize(uin: Long, device: DeviceInfo, qimei36: String, channel: EncryptService.ChannelProxy) {
         channel0 = channel
         if (token.get() == 0L) {
-            val uin = id
             @OptIn(MiraiInternalApi::class)
             register(
                 uin = uin,
@@ -63,7 +64,7 @@ public abstract class AbstractAdapter(
             }
         }
 
-        logger.info("Bot($id) initialize complete")
+        logger.info("Bot($uin) initialize complete")
     }
     protected abstract fun register(uin: Long, androidId: String, guid: String, qimei36: String)
     protected abstract fun destroy(uin: Long)
@@ -86,9 +87,8 @@ public abstract class AbstractAdapter(
         }
         throw cause
     }
-    protected fun signRegister(id: Long) {
-        if (token.compareAndSet(0, id)) {
-            val uin = id
+    protected fun signRegister(uin: Long) {
+        if (token.compareAndSet(0, uin)) {
             launch(CoroutineName(name = "RequestToken")) {
                 while (isActive) {
                     val interval = System.getProperty(REQUEST_TOKEN_INTERVAL, "2400000").toLong()
@@ -128,6 +128,49 @@ public abstract class AbstractAdapter(
                 submit(uin = uin, cmd = result.cmd, callbackId = callback.id, buffer = result.data)
             }
         }
+    }
+
+
+    override fun initialize(context: EncryptServiceContext) {
+        val device = context.extraArgs[EncryptServiceContext.KEY_DEVICE_INFO]
+        val qimei36 = context.extraArgs[EncryptServiceContext.KEY_QIMEI36]
+        val channel = context.extraArgs[EncryptServiceContext.KEY_CHANNEL_PROXY]
+
+        QsignWebSocketAdapter.logger.info("Bot(${context.id}) initialize by $serverName")
+
+        initialize(context.id, device, qimei36, channel)
+    }
+
+    override fun encryptTlv(context: EncryptServiceContext, tlvType: Int, payload: ByteArray): ByteArray? {
+        if (tlvType != 0x544) return null
+        val command = context.extraArgs[EncryptServiceContext.KEY_COMMAND_STR]
+
+        val data = customEnergy(uin = context.id, salt = payload, data = command)
+
+        return data.hexToBytes()
+    }
+
+    override fun qSecurityGetSign(
+        context: EncryptServiceContext,
+        sequenceId: Int,
+        commandName: String,
+        payload: ByteArray
+    ): EncryptService.SignResult? {
+        if (commandName == "StatSvc.register") {
+            signRegister(context.id)
+        }
+
+        if (commandName !in CMD_WHITE_LIST) return null
+
+        val data = sign(uin = context.id, cmd = commandName, seq = sequenceId, buffer = payload)
+
+        callback(uin = context.id, request = data.request)
+
+        return EncryptService.SignResult(
+            sign = data.sign.hexToBytes(),
+            token = data.token.hexToBytes(),
+            extra = data.extra.hexToBytes()
+        )
     }
 
     public companion object {

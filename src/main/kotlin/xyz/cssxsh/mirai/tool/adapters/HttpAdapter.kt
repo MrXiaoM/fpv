@@ -16,7 +16,7 @@ public class QsignHttpAdapter(
     private val ver: String,
     private val qua: String,
     coroutineContext: CoroutineContext
-): AbstractAdapter(coroutineContext), EncryptService {
+): AbstractAdapter(server, coroutineContext) {
 
     private val client = Dsl.asyncHttpClient(
         DefaultAsyncHttpClientConfig.Builder()
@@ -30,16 +30,6 @@ public class QsignHttpAdapter(
 
     private fun BoundRequestBuilder.applyHeader(): BoundRequestBuilder = apply {
         NetworkServiceFactory.headers.forEach(::setHeader)
-    }
-
-    override fun initialize(context: EncryptServiceContext) {
-        val device = context.extraArgs[EncryptServiceContext.KEY_DEVICE_INFO]
-        val qimei36 = context.extraArgs[EncryptServiceContext.KEY_QIMEI36]
-        val channel = context.extraArgs[EncryptServiceContext.KEY_CHANNEL_PROXY]
-
-        logger.info("Bot(${context.id}) initialize by $server")
-
-        initialize(context.id, device, qimei36, channel)
     }
 
     override fun register(uin: Long, androidId: String, guid: String, qimei36: String) {
@@ -73,15 +63,6 @@ public class QsignHttpAdapter(
         logger.info("Bot(${uin}) destroy, ${body.message}")
     }
 
-    override fun encryptTlv(context: EncryptServiceContext, tlvType: Int, payload: ByteArray): ByteArray? {
-        if (tlvType != 0x544) return null
-        val command = context.extraArgs[EncryptServiceContext.KEY_COMMAND_STR]
-
-        val data = customEnergy(uin = context.id, salt = payload, data = command)
-
-        return data.hexToBytes()
-    }
-
     override fun customEnergy(uin: Long, salt: ByteArray, data: String): String {
         val response = client.prepareGet("${server}/custom_energy")
             .applyHeader()
@@ -97,29 +78,6 @@ public class QsignHttpAdapter(
         logger.debug("Bot(${uin}) custom_energy ${data}, ${body.message}")
 
         return json.decodeFromJsonElement(String.serializer(), body.data)
-    }
-
-    override fun qSecurityGetSign(
-        context: EncryptServiceContext,
-        sequenceId: Int,
-        commandName: String,
-        payload: ByteArray
-    ): EncryptService.SignResult? {
-        if (commandName == "StatSvc.register") {
-            signRegister(context.id)
-        }
-
-        if (commandName !in CMD_WHITE_LIST) return null
-
-        val data = sign(uin = context.id, cmd = commandName, seq = sequenceId, buffer = payload)
-
-        callback(uin = context.id, request = data.request)
-
-        return EncryptService.SignResult(
-            sign = data.sign.hexToBytes(),
-            token = data.token.hexToBytes(),
-            extra = data.extra.hexToBytes()
-        )
     }
 
     override fun sign(uin: Long, cmd: String, seq: Int, buffer: ByteArray): SignResult {
@@ -172,7 +130,7 @@ public class QsignHttpAdapter(
     }
 
     override fun toString(): String {
-        return "UnidbgFetchQsign(server=${server}, uin=${token})"
+        return "QsignHttpAdapter(server=${server}, uin=${token})"
     }
 
     public companion object {
