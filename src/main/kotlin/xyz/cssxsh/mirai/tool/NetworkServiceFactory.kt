@@ -8,7 +8,9 @@ import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.internal.spi.*
 import net.mamoe.mirai.internal.utils.*
 import net.mamoe.mirai.utils.*
+import xyz.cssxsh.mirai.tool.adapters.Client
 import xyz.cssxsh.mirai.tool.adapters.QsignHttpAdapter
+import xyz.cssxsh.mirai.tool.adapters.QsignWebSocketAdapter
 import java.io.File
 import java.net.ConnectException
 import java.net.URL
@@ -121,14 +123,24 @@ public class NetworkServiceFactory(
                 val (about, server) = networkConfig.tryServers(parentJob, serviceSubScope)
 
                 checkSignServerAvailability(protocol, version, server, about)
-
-                QsignHttpAdapter(
-                    server = server.base,
-                    key = server.key,
-                    ver = version,
-                    qua = qua,
-                    coroutineContext = serviceSubScope.coroutineContext
-                )
+                if (server.base.startsWith("ws")) {
+                    val client = Client.connectionPool[server.base]!!
+                    QsignWebSocketAdapter(
+                        server = server.base,
+                        ver = version,
+                        qua = qua,
+                        client = client,
+                        coroutineContext = serviceSubScope.coroutineContext
+                    )
+                } else {
+                    QsignHttpAdapter(
+                        server = server.base,
+                        key = server.key,
+                        ver = version,
+                        qua = qua,
+                        coroutineContext = serviceSubScope.coroutineContext
+                    )
+                }
             }
             BotConfiguration.MiraiProtocol.ANDROID_WATCH,
             BotConfiguration.MiraiProtocol.IPAD,
