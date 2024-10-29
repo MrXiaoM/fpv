@@ -12,6 +12,7 @@ import net.mamoe.mirai.event.events.BotOfflineEvent
 import net.mamoe.mirai.internal.spi.EncryptService
 import net.mamoe.mirai.internal.spi.EncryptServiceContext
 import net.mamoe.mirai.utils.*
+import xyz.cssxsh.mirai.tool.NetworkServiceFactory
 import xyz.cssxsh.mirai.tool.NetworkServiceStateException
 import kotlin.coroutines.CoroutineContext
 
@@ -175,7 +176,7 @@ public abstract class AbstractAdapter(
 
     public companion object {
         @JvmStatic
-        internal val CMD_WHITE_LIST = QsignHttpAdapter::class.java.getResource("cmd.txt")!!.readText().lines()
+        internal val CMD_WHITE_LIST = NetworkServiceFactory::class.java.getResource("cmd.txt")!!.readText().lines()
 
         @JvmStatic
         internal val RESET_SESSION = arrayOf(

@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 
 public class Client(
     server: String,
-    parentJob: Job,
+    parentJob: Job?,
     private val scope: CoroutineScope,
     private val retryTimes: Int = 5,
     private val retryWaitMills: Long = 5000L,
@@ -22,7 +22,7 @@ public class Client(
     private val echos = JavaAtomicLong(0)
     private val futureMap: MutableMap<String, CompletableFuture<JsonObject>> = mutableMapOf()
     private var retryCount = 0
-    private var scheduleClose = false
+    private var scheduleClose = true
     @OptIn(InternalCoroutinesApi::class)
     private val connectDef = CompletableDeferred<Boolean>(parentJob).apply {
         invokeOnCompletion(
@@ -115,11 +115,12 @@ public class Client(
         }
         public val connectionPool: MutableMap<String, Client> = mutableMapOf()
 
-        public suspend fun connect(server: String, parentJob: Job, scope: CoroutineScope): WebSocketClient {
+        public suspend fun connect(server: String, parentJob: Job?, scope: CoroutineScope): Client {
             val conn = connectionPool[server] ?: Client(server, parentJob, scope)
             if (!conn.isOpen) {
                 conn.connectSuspend()
             }
+            conn.scheduleClose = false
             return conn
         }
     }

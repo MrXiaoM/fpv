@@ -1,6 +1,8 @@
 package xyz.cssxsh.mirai.tool
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
+import net.mamoe.mirai.console.MiraiConsole
 import net.mamoe.mirai.console.command.CommandManager.INSTANCE.register
 import net.mamoe.mirai.console.command.CommandManager.INSTANCE.unregister
 import net.mamoe.mirai.console.command.ConsoleCommandSender
@@ -37,6 +39,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
         }
         logger.info("注册服务...")
         try {
+            NetworkServiceFactory.parentJob = MiraiConsole.job
             NetworkServiceFactory.install()
             with(File(System.getProperty(NetworkServiceFactory.CONFIG_PATH_PROPERTY, "network.json"))) {
                 if (exists().not()) {
@@ -48,7 +51,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
             val factory = NetworkServiceFactory.inst ?: throw IllegalStateException("当前使用的签名服务并非 trpgbot")
             logger.info("正在检查可用的签名服务器")
 
-            val (about, _) = factory.networkConfig.tryServers(true)
+            val (about, _) = factory.networkConfig.tryServers(MiraiConsole.job, this@FixProtocolVersionPlugin, true)
             factory.checkProtocolUpdate(BotConfiguration.MiraiProtocol.ANDROID_PAD, about)
 
         } catch (_: NoClassDefFoundError) {

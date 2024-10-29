@@ -47,6 +47,7 @@ public class NetworkServiceFactory(
         internal val headers = mapOf(
             "User-Agent" to userAgent
         )
+        public var parentJob: Job? = null
         @JvmStatic
         public fun install() {
             Services.register(
@@ -117,7 +118,7 @@ public class NetworkServiceFactory(
                     }"
                 )
 
-                val (about, server) = networkConfig.tryServers()
+                val (about, server) = networkConfig.tryServers(parentJob, serviceSubScope)
 
                 checkSignServerAvailability(protocol, version, server, about)
 
