@@ -1,157 +1,102 @@
 package xyz.cssxsh.mirai.tool.adapters
 
 import kotlinx.coroutines.*
-import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.*
 import net.mamoe.mirai.utils.MiraiLogger
-import org.java_websocket.client.WebSocketClient
-import org.java_websocket.handshake.ServerHandshake
-import xyz.cssxsh.mirai.tool.NetworkServiceFactory
-import java.net.URI
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import net.mamoe.mirai.utils.toUHexString
+import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
 import kotlin.coroutines.CoroutineContext
 
 public class QsignWebSocketAdapter(
     private val server: String,
     private val ver: String,
     private val qua: String,
-    parentJob: Job,
+    public val client: Client,
     coroutineContext: CoroutineContext,
 ): AbstractAdapter(server, coroutineContext) {
-    public val client: Client = Client(server, parentJob, this,
-        NetworkServiceFactory.headers.plus(mapOf(
-            "X-Qsign-QUA" to qua,
-            "X-Qsign-Ver" to ver,
-        )))
-    public class Client(
-        server: String,
-        parentJob: Job,
-        private val scope: CoroutineScope,
-        headers: Map<String, String>,
-        private val retryTimes: Int = 5,
-        private val retryWaitMills: Long = 5000L,
-        private val retryRestMills: Long = 60000L,
-    ) : WebSocketClient(URI(server), headers) {
-        private val echos = JavaAtomicLong(0)
-        private val futureMap: MutableMap<String, CompletableFuture<JsonObject>> = mutableMapOf()
-        private var retryCount = 0
-        private var scheduleClose = false
-        @OptIn(InternalCoroutinesApi::class)
-        private val connectDef = CompletableDeferred<Boolean>(parentJob).apply {
-            invokeOnCompletion(
-                onCancelling = true,
-                invokeImmediately = true
-            ) { close() }
-        }
-        public suspend fun connectSuspend(): Boolean {
-            if (super.connectBlocking()) return true
-            return connectDef.await()
-        }
-        override fun onOpen(handshakedata: ServerHandshake) {
-            logger.info("已连接到签名服务器")
-        }
-        override fun connect() {
-            scheduleClose = false
-            super.connect()
-        }
-        override fun close() {
-            scheduleClose = true
-            super.close()
-        }
-        public fun send(type: String, params: JsonObject): JsonObject? {
-            val echo = echos.getAndIncrement().toString()
-            val future = CompletableFuture<JsonObject>()
-            futureMap[echo] = future
-            send(buildJsonObject {
-                put("type", type)
-                put("params", params)
-                put("echo", echo)
-            }.toString())
-            return runCatching {
-                future.get(15, TimeUnit.SECONDS)
-            }.getOrNull()
-        }
-        override fun onMessage(message: String) {
-            try {
-                val json = jsonParser.parseToJsonElement(message).jsonObject
-                val echo = json["echo"]?.jsonPrimitive?.content ?: return
-                val payload = json["payload"]?.jsonObject ?: return
-                val future = futureMap.remove(echo) ?: return
-                if (future.isDone || future.isCancelled) return
-                future.complete(payload)
-            } catch (e: SerializationException) {
-                logger.error("Json语法错误: $message")
-            }
-        }
-        override fun onClose(code: Int, reason: String, remote: Boolean) {
-            logger.info("签名服务器连接因 ${reason.ifEmpty { "未知原因" }} 已关闭 (关闭码: $code)")
-            // 自动重连
-            if (!scheduleClose) retry()
-        }
-        private fun retry() {
-            if (retryTimes < 1 || retryWaitMills < 0) {
-                logger.warning("连接失败，未开启自动重连，放弃连接")
-                connectDef.complete(false)
-                return
-            }
-            scope.launch {
-                if (retryCount < retryTimes) {
-                    retryCount++
-                    logger.warning(
-                        "等待 ${
-                            String.format("%.1f", retryWaitMills / 1000.0F)
-                        } 秒后重连 (第 $retryCount/$retryTimes 次)"
-                    )
-                    delay(retryWaitMills)
-                } else {
-                    retryCount = 0
-                    if (retryRestMills < 0) {
-                        logger.warning("重连次数耗尽... 放弃重试")
-                        return@launch
-                    }
-                    logger.warning("重连次数耗尽... 休息 ${String.format("%.1f", retryRestMills / 1000.0F)} 秒后重试")
-                    delay(retryRestMills)
-                }
-                logger.info("正在重连...")
-                if (reconnectBlocking()) {
-                    retryCount = 0
-                    connectDef.complete(true)
-                }
-            }
-        }
-        override fun onError(ex: Exception) {
-            logger.error("签名服务器连接出现错误 ${ex.localizedMessage} 或未连接")
-        }
-        public companion object {
-            public val jsonParser: Json = Json {
-                ignoreUnknownKeys = true
-            }
-        }
+
+    private fun params(block: JsonObjectBuilder.() -> Unit): JsonObject = buildJsonObject {
+        put("qua", qua)
+        put("ver", ver)
+        block(this)
     }
 
     override fun register(uin: Long, androidId: String, guid: String, qimei36: String) {
-        TODO("Not yet implemented")
+        val resp = client.send("register", params {
+            put("uin", uin.toString())
+            put("android_id", androidId)
+            put("guid", guid)
+            put("qimei36", qimei36)
+        }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+        body.check(uin = uin)
+
+        QsignHttpAdapter.logger.info("Bot(${uin}) register, ${body.message}")
     }
 
     override fun destroy(uin: Long) {
-        TODO("Not yet implemented")
+        val resp = client.send("destroy", params {
+            put("uin", uin.toString())
+        }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+
+        logger.info("Bot(${uin}) destroy, ${body.message}")
     }
 
     override fun customEnergy(uin: Long, salt: ByteArray, data: String): String {
-        TODO("Not yet implemented")
+        val resp = client.send("custom_energy", params {
+            put("uin", uin.toString())
+            put("salt", salt.toUHexString(""))
+            put("data", data)
+        }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+        body.check(uin = uin)
+
+        logger.debug("Bot(${uin}) custom_energy ${data}, ${body.message}")
+
+        return json.decodeFromJsonElement(String.serializer(), body.data)
     }
 
     override fun sign(uin: Long, cmd: String, seq: Int, buffer: ByteArray): SignResult {
-        TODO("Not yet implemented")
+        val resp = client.send("sign", params {
+            put("uin", uin.toString())
+            put("cmd", cmd)
+            put("seq", seq.toString())
+            put("buffer", buffer.toUHexString(""))
+        }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+        body.check(uin = uin)
+
+        logger.debug("Bot(${uin}) sign ${cmd}, ${body.message}")
+
+        return json.decodeFromJsonElement(SignResult.serializer(), body.data)
     }
 
     override fun requestToken(uin: Long): List<RequestCallback> {
-        TODO("Not yet implemented")
+        val resp = client.send("request_token", params {
+            put("uin", uin.toString())
+        }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+        body.check(uin = uin)
+
+        logger.info("Bot(${uin}) request_token, ${body.message}")
+
+        return json.decodeFromJsonElement(ListSerializer(RequestCallback.serializer()), body.data)
     }
 
     override fun submit(uin: Long, cmd: String, callbackId: Long, buffer: ByteArray) {
-        TODO("Not yet implemented")
+        val resp = client.send("submit", params {
+            put("uin", uin.toString())
+            put("cmd", cmd)
+            put("callback_id", callbackId.toString())
+            put("buffer", buffer.toUHexString(""))
+        }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+        body.check(uin = uin)
+
+        logger.debug("Bot(${uin}) submit ${cmd}, ${body.message}")
     }
 
     override fun toString(): String {
