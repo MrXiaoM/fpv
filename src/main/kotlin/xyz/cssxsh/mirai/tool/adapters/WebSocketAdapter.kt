@@ -23,6 +23,7 @@ public class QsignWebSocketAdapter(
     }
 
     override fun register(uin: Long, androidId: String, guid: String, qimei36: String) {
+        /*
         val resp = client.send("register", params {
             put("uin", uin.toString())
             put("android_id", androidId)
@@ -33,15 +34,18 @@ public class QsignWebSocketAdapter(
         body.check(uin = uin)
 
         QsignHttpAdapter.logger.info("Bot(${uin}) register, ${body.message}")
+         */
     }
 
     override fun destroy(uin: Long) {
+        /*
         val resp = client.send("destroy", params {
             put("uin", uin.toString())
         }) ?: throw IllegalStateException("签名服务请求超时或回调失败")
         val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
 
         logger.info("Bot(${uin}) destroy, ${body.message}")
+         */
     }
 
     override fun customEnergy(uin: Long, salt: ByteArray, data: String): String {
