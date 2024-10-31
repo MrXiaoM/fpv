@@ -169,34 +169,35 @@ public object FixProtocolVersion {
                 else -> impl
             }
         }
-        protocols.compute(BotConfiguration.MiraiProtocol.ANDROID_WATCH) { _, impl ->
+        protocols.compute(BotConfiguration.MiraiProtocol.ANDROID_WATCH) { protocol, impl ->
+            qua[protocol] = "V1_WAT_SQ_9.0.3_0_IDC_B"
             when {
                 null == impl -> null
                 impl.runCatching { id }.isFailure -> impl.change {
-                    apkId = "com.tencent.qqlite"
-                    id = 537065138
-                    ver = "2.0.8"
-                    sdkVer = "6.0.0.2365"
-                    miscBitMap = 0x00F7_FF7C
+                    apkId = "com.tencent.mobileqq"
+                    id = 537243416
+                    ver = "9.0.3"
+                    sdkVer = "6.0.0.2498"
+                    miscBitMap = 0x08F7_FF7C
                     subSigMap = 0x0001_0400
                     mainSigMap = 0x00FF_32F2
                     sign = "A6 B7 45 BF 24 A2 C2 77 52 77 16 F6 F3 6E B6 8D"
-                    buildTime = 1559564731L
-                    ssoVersion = 5
+                    buildTime = 1648001696L
+                    ssoVersion = 18
                     supportsQRLogin = true
                 }
                 impl.id < 537065138 -> impl.apply {
-                    apkId = "com.tencent.qqlite"
-                    id = 537065138
-                    ver = "2.0.8"
-                    buildVer = "2.0.8"
-                    sdkVer = "6.0.0.2365"
-                    miscBitMap = 0x00F7_FF7C
+                    apkId = "com.tencent.mobileqq"
+                    id = 537243416
+                    ver = "9.0.3"
+                    buildVer = "9.0.3"
+                    sdkVer = "6.0.0.2498"
+                    miscBitMap = 0x08F7_FF7C
                     subSigMap = 0x0001_0400
                     mainSigMap = 0x00FF_32F2
                     sign = "A6 B7 45 BF 24 A2 C2 77 52 77 16 F6 F3 6E B6 8D"
-                    buildTime = 1559564731L
-                    ssoVersion = 5
+                    buildTime = 1648001696L
+                    ssoVersion = 18
                     supportsQRLogin = true
                 }
                 else -> impl
