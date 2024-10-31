@@ -186,7 +186,7 @@ public object FixProtocolVersion {
                     ssoVersion = 18
                     supportsQRLogin = true
                 }
-                impl.id < 537065138 -> impl.apply {
+                impl.id < 537243416 -> impl.apply {
                     apkId = "com.tencent.mobileqq"
                     id = 537243416
                     ver = "9.0.3"
