@@ -43,10 +43,12 @@ internal data class NetworkConfig(
             NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
         }
         if (s.base.startsWith("ws")) {
-            runBlocking {
+            return runBlocking {
                 val conn = Client.connect(s.base, parentJob, scope)
+                val packet = conn.send("index", buildJsonObject {  }) ?: return@runBlocking null
+                val about = packet["payload"]?.toString() ?: return@runBlocking null
+                return@runBlocking about to s
             }
-            throw RuntimeException("测试")
         }
         return tryHttp(s, main, startup)
     }
