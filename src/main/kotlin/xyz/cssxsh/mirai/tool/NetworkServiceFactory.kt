@@ -111,7 +111,8 @@ public class NetworkServiceFactory(
         val protocol = context.extraArgs[EncryptServiceContext.KEY_BOT_PROTOCOL]
         val qua = FixProtocolVersion.qua[protocol] ?: throw UnsupportedOperationException("协议 $protocol 未提供 qua")
         return when (protocol) {
-            BotConfiguration.MiraiProtocol.ANDROID_PHONE, BotConfiguration.MiraiProtocol.ANDROID_PAD -> {
+            BotConfiguration.MiraiProtocol.ANDROID_PHONE, BotConfiguration.MiraiProtocol.ANDROID_PAD,
+            /*trpgbot:*/BotConfiguration.MiraiProtocol.ANDROID_WATCH -> {
                 @Suppress("INVISIBLE_MEMBER")
                 val version = MiraiProtocolInternal[protocol].ver
                 logger.info(
@@ -142,7 +143,6 @@ public class NetworkServiceFactory(
                     )
                 }
             }
-            BotConfiguration.MiraiProtocol.ANDROID_WATCH,
             BotConfiguration.MiraiProtocol.IPAD,
             BotConfiguration.MiraiProtocol.MACOS -> throw UnsupportedOperationException(protocol.name)
         }
