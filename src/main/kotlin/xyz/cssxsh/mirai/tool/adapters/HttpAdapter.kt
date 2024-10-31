@@ -42,7 +42,7 @@ public class QsignHttpAdapter(
             .addQueryParam("qimei36", qimei36)
             .addQueryParam("key", key)
             .execute().get()
-        val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
 
         logger.info("Bot(${uin}) register, ${body.message}")
@@ -57,7 +57,7 @@ public class QsignHttpAdapter(
             .addQueryParam("key", key)
             .execute().get()
         if (response.statusCode == 404) return
-        val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
 
         logger.info("Bot(${uin}) destroy, ${body.message}")
     }
@@ -71,7 +71,7 @@ public class QsignHttpAdapter(
             .addQueryParam("salt", salt.toUHexString(""))
             .addQueryParam("data", data)
             .execute().get()
-        val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
 
         logger.debug("Bot(${uin}) custom_energy ${data}, ${body.message}")
@@ -89,7 +89,7 @@ public class QsignHttpAdapter(
             .addFormParam("seq", seq.toString())
             .addFormParam("buffer", buffer.toUHexString(""))
             .execute().get()
-        val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
 
         logger.debug("Bot(${uin}) sign ${cmd}, ${body.message}")
@@ -104,7 +104,7 @@ public class QsignHttpAdapter(
             .addQueryParam("ver", ver)
             .addQueryParam("qua", qua)
             .execute().get()
-        val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
 
         logger.info("Bot(${uin}) request_token, ${body.message}")
@@ -122,7 +122,7 @@ public class QsignHttpAdapter(
             .addQueryParam("callback_id", callbackId.toString())
             .addQueryParam("buffer", buffer.toUHexString(""))
             .execute().get()
-        val body = json.decodeFromString(DataWrapper.serializer(), response.responseBody)
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
 
         logger.debug("Bot(${uin}) submit ${cmd}, ${body.message}")

@@ -1,6 +1,7 @@
 package xyz.cssxsh.mirai.tool.adapters
 
 import kotlinx.coroutines.*
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -13,6 +14,7 @@ import net.mamoe.mirai.internal.spi.EncryptService
 import net.mamoe.mirai.internal.spi.EncryptServiceContext
 import net.mamoe.mirai.utils.*
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory
+import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
 import xyz.cssxsh.mirai.tool.NetworkServiceStateException
 import kotlin.coroutines.CoroutineContext
 
@@ -174,6 +176,12 @@ public abstract class AbstractAdapter(
             extra = data.extra.hexToBytes()
         )
     }
+
+    public fun <T> decodeFromString(deserializer: DeserializationStrategy<T>, s: String): T = runCatching {
+        return@runCatching json.decodeFromString(deserializer, s)
+    }.onFailure {
+        logger.warning("decode json failed: $s")
+    }.getOrThrow()
 
     public companion object {
         @JvmStatic
