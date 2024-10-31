@@ -116,6 +116,7 @@ public class Client(
                 retryCount = 0
                 if (retryRestMills < 0) {
                     logger.warning("重连次数耗尽... 放弃重试")
+                    connectDef.complete(false)
                     return@launch
                 }
                 logger.warning("重连次数耗尽... 休息 ${String.format("%.1f", retryRestMills / 1000.0F)} 秒后重试")
