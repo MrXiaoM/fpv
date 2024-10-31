@@ -35,6 +35,11 @@ public class Client(
         if (super.connectBlocking()) return true
         return connectDef.await()
     }
+    public suspend fun reconnectSuspend(): Boolean {
+        if (super.reconnectBlocking()) return true
+        return connectDef.await()
+    }
+
     override fun onOpen(handshakedata: ServerHandshake) {
         logger.info("已连接到签名服务器")
     }
@@ -129,9 +134,15 @@ public class Client(
         public val connectionPool: MutableMap<String, Client> = mutableMapOf()
 
         public suspend fun connect(server: String, parentJob: Job?, scope: CoroutineScope): Client {
-            val conn = connectionPool[server] ?: Client(server, parentJob, scope).also { connectionPool[server] = it }
-            if (!conn.isOpen) {
-                conn.connectSuspend()
+            val conn = connectionPool[server]?.also {
+                if (!it.isOpen) {
+                    it.scheduleClose = true
+                    it.reconnectSuspend()
+                }
+            } ?: Client(server, parentJob, scope).also {
+                it.scheduleClose = true
+                connectionPool[server] = it
+                it.connectSuspend()
             }
             conn.scheduleClose = false
             return conn
