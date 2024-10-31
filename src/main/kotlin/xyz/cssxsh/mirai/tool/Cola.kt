@@ -40,13 +40,17 @@ internal data class NetworkConfig(
         throw RuntimeException("请检查 trpgbot 的可用性")
     }
     private fun tryServer(parentJob: Job?, scope: CoroutineScope, s: Cola, main: Boolean, startup: Boolean): Pair<String, Cola>? {
-        if (main) {
-            NetworkServiceFactory.logger.info("正在尝试连接 主服务器 ${s.base}")
-        } else {
-            NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
-        }
         if (s.base.startsWith("ws")) {
             return runBlocking {
+                if (Client.connectionPool.containsKey(s.base)) {
+                    NetworkServiceFactory.logger.info("正在复用连接 ${s.base}")
+                } else {
+                    if (main) {
+                        NetworkServiceFactory.logger.info("正在尝试连接 主服务器 ${s.base}")
+                    } else {
+                        NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
+                    }
+                }
                 val conn = Client.connect(s.base, parentJob, scope)
                 val packet = conn.send("index", buildJsonObject {  })
                 if (packet == null) {
@@ -58,6 +62,11 @@ internal data class NetworkConfig(
                 return@runBlocking aboutString to s
             }
         } else {
+            if (main) {
+                NetworkServiceFactory.logger.info("正在尝试连接 主服务器 ${s.base}")
+            } else {
+                NetworkServiceFactory.logger.info("正在尝试连接 CDN ${s.base}")
+            }
             return tryHttp(s, main, startup)
         }
     }
