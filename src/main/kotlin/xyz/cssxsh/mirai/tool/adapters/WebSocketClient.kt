@@ -17,7 +17,7 @@ public class Client(
     private val scope: CoroutineScope,
     private val retryTimes: Int = 5,
     private val retryWaitMills: Long = 5000L,
-    private val retryRestMills: Long = 60000L,
+    private val retryRestMills: Long = -1,
 ) : WebSocketClient(URI(server), NetworkServiceFactory.headers) {
     private val echos = JavaAtomicLong(0)
     private val futureMap: MutableMap<String, CompletableFuture<JsonObject>> = mutableMapOf()
@@ -90,8 +90,12 @@ public class Client(
     }
     override fun onClose(code: Int, reason: String, remote: Boolean) {
         logger.info("签名服务器连接因 ${reason.ifEmpty { "未知原因" }} 已关闭 (关闭码: $code)")
+        for (future in futureMap.values) {
+            future.cancel(true)
+        }
+        futureMap.clear()
         // 自动重连
-        // if (!scheduleClose) retry()
+        if (!scheduleClose) retry()
     }
     private fun retry() {
         if (retryTimes < 1 || retryWaitMills < 0) {
