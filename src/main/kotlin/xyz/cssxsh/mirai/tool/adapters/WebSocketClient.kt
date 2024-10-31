@@ -69,14 +69,14 @@ public class Client(
             put("params", params)
             put("echo", echo)
         }.toString()
-        logger.info("[SEND] -> $json")
+        logger.debug("[SEND] -> $json")
         send(json)
         return runCatching {
             future.get(15, TimeUnit.SECONDS)
         }.getOrNull()
     }
     override fun onMessage(message: String) {
-        logger.info("[RECV] <- $message")
+        logger.debug("[RECV] <- $message")
         try {
             val json = jsonParser.parseToJsonElement(message).jsonObject
             val echo = json["echo"]?.jsonPrimitive?.content ?: return
