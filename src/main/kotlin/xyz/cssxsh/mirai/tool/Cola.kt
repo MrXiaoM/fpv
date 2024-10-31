@@ -28,11 +28,14 @@ internal data class NetworkConfig(
     fun tryServers(parentJob: Job?, scope: CoroutineScope, startup: Boolean = false): Pair<String, Cola> {
         val cdn = cdnList.toList()
         if (tryCdnFirst) for (s in cdn) {
-            tryServer(parentJob, scope, s, false, startup)?.also { return it }
+            val pair = tryServer(parentJob, scope, s, false, startup)
+            if (pair != null) return pair
         }
-        tryServer(parentJob, scope, main, true, startup)?.also { return it }
-        for (s in cdn) {
-            tryServer(parentJob, scope, s, false, startup)?.also { return it }
+        val pair = tryServer(parentJob, scope, main, true, startup)
+        if (pair != null) return pair
+        if (!tryCdnFirst) for (s in cdn) {
+            val pair1 = tryServer(parentJob, scope, s, false, startup)
+            if (pair1 != null) return pair1
         }
         throw RuntimeException("请检查 trpgbot 的可用性")
     }
@@ -45,18 +48,25 @@ internal data class NetworkConfig(
         if (s.base.startsWith("ws")) {
             return runBlocking {
                 val conn = Client.connect(s.base, parentJob, scope)
-                val packet = conn.send("index", buildJsonObject {  }) ?: return@runBlocking null
-                val about = packet["payload"]?.toString() ?: return@runBlocking null
-                return@runBlocking about to s
+                val packet = conn.send("index", buildJsonObject {  })
+                if (packet == null) {
+                    NetworkServiceFactory.logger.warning("访问 ${s.base} 获取信息出错: 未接收到回调包")
+                    return@runBlocking null
+                }
+                val aboutString = packet.toString()
+                NetworkServiceFactory.logger.info("服务器 ${s.base} 可用")
+                return@runBlocking aboutString to s
             }
+        } else {
+            return tryHttp(s, main, startup)
         }
-        return tryHttp(s, main, startup)
     }
 
     private fun tryHttp(s: Cola, main: Boolean, startup: Boolean): Pair<String, Cola>? {
         try {
             val about = readText(s.base, startup)
             NetworkServiceFactory.json.parseToJsonElement(about)
+            NetworkServiceFactory.logger.info("服务器 ${s.base} 可用")
             return about to s
         } catch (cause: Exception) {
             if (main) {

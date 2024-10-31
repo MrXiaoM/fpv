@@ -28,7 +28,7 @@ public class Client(
         invokeOnCompletion(
             onCancelling = true,
             invokeImmediately = true
-        ) { close() }
+        ) { close(1000, "用户请求关闭") }
     }
 
     public suspend fun connectSuspend(): Boolean {
@@ -42,6 +42,15 @@ public class Client(
         scheduleClose = false
         super.connect()
     }
+
+    override fun close(code: Int, message: String?) {
+        scheduleClose = true
+        super.close(code, message)
+    }
+    override fun close(code: Int) {
+        scheduleClose = true
+        super.close(code)
+    }
     override fun close() {
         scheduleClose = true
         super.close()
@@ -50,16 +59,19 @@ public class Client(
         val echo = echos.getAndIncrement().toString()
         val future = CompletableFuture<JsonObject>()
         futureMap[echo] = future
-        send(buildJsonObject {
+        val json = buildJsonObject {
             put("type", type)
             put("params", params)
             put("echo", echo)
-        }.toString())
+        }.toString()
+        logger.info("[SEND] -> $json")
+        send(json)
         return runCatching {
             future.get(15, TimeUnit.SECONDS)
         }.getOrNull()
     }
     override fun onMessage(message: String) {
+        logger.info("[RECV] <- $message")
         try {
             val json = jsonParser.parseToJsonElement(message).jsonObject
             val echo = json["echo"]?.jsonPrimitive?.content ?: return
@@ -74,7 +86,7 @@ public class Client(
     override fun onClose(code: Int, reason: String, remote: Boolean) {
         logger.info("签名服务器连接因 ${reason.ifEmpty { "未知原因" }} 已关闭 (关闭码: $code)")
         // 自动重连
-        if (!scheduleClose) retry()
+        // if (!scheduleClose) retry()
     }
     private fun retry() {
         if (retryTimes < 1 || retryWaitMills < 0) {
