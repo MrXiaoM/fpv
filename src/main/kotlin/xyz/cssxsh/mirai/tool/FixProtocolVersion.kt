@@ -297,7 +297,8 @@ public object FixProtocolVersion {
         file.setLastModified(time)
 
         NetworkServiceFactory.inst?.apply {
-            val other = File(protocolsFolder, "")
+            // 备份已下载的版本信息文件到 protocols 文件夹
+            val other = File(protocolsFolder, "${protocol.name.lowercase()}_$version.json")
             if (!other.exists()) {
                 other.writeText(content)
                 other.setLastModified(time)
