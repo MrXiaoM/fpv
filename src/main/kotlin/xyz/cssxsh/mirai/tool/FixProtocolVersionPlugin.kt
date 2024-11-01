@@ -8,6 +8,7 @@ import net.mamoe.mirai.console.command.CommandManager.INSTANCE.unregister
 import net.mamoe.mirai.console.command.ConsoleCommandSender
 import net.mamoe.mirai.console.extension.*
 import net.mamoe.mirai.console.plugin.jvm.*
+import net.mamoe.mirai.console.plugin.version
 import net.mamoe.mirai.console.util.AnsiMessageBuilder
 import net.mamoe.mirai.console.util.sendAnsiMessage
 import net.mamoe.mirai.utils.*
@@ -18,7 +19,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
     JvmPluginDescription(
         id = "trpgbot.qsign",
         name = "trpgbot",
-        version = "1.13.2"
+        version = "1.13.3"
     ) {
         author("cssxsh & MrXiaoM")
     }
@@ -49,6 +50,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
             }
             logger.warning("您正在使用远程签名服务，数据包将经过签名服务器，请勿添加不可信源")
             val factory = NetworkServiceFactory.inst ?: throw IllegalStateException("当前使用的签名服务并非 trpgbot")
+            logger.info("正在运行 trpgbot.qsign v$version")
             logger.info("正在检查可用的签名服务器")
 
             val (about, _) = factory.networkConfig.tryServers(MiraiConsole.job, this@FixProtocolVersionPlugin, true)
