@@ -18,7 +18,7 @@ internal data class NetworkConfig(
     @SerialName("main")
     val main: Cola,
     @SerialName("try_cdn_first")
-    val tryCdnFirst: Boolean,
+    var tryCdnFirst: Boolean,
     @SerialName("cdn")
     val cdnList: MutableList<Cola>,
 ) {
@@ -32,8 +32,12 @@ internal data class NetworkConfig(
             if (pair != null) return pair
         }
         val pair = tryServer(parentJob, scope, main, true, startup)
-        if (pair != null) return pair
-        if (!tryCdnFirst) for (s in cdn) {
+        if (pair != null) {
+            return pair
+        } else {
+            tryCdnFirst = true
+        }
+        for (s in cdn) {
             val pair1 = tryServer(parentJob, scope, s, false, startup)
             if (pair1 != null) return pair1
         }

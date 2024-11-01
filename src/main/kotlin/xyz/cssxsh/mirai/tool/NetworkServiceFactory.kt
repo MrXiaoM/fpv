@@ -68,11 +68,12 @@ public class NetworkServiceFactory(
                 "protocol_source": "MrXiaoM/protocol-versions",
                 "protocol_version": "latest",
                 "main": { "base_url": "wss://qsign.trpgbot.com/ws" },
-                "try_cdn_first": true,
+                "try_cdn_first": false,
                 "cdn": [
                     { "base_url": "https://zyr15r-astralqsign.hf.space", "key": "selfshare" },
                     { "base_url": "https://qsign.chahuyun.cn", "key": "selfshare" },
-                    { "base_url": "http://qsign-v3.trpgbot.com", "key": "selfshare" }
+                    { "base_url": "http://qsign-v3.trpgbot.com", "key": "selfshare" },
+                    { "base_url": "https://qsign.trpgbot.com", "key": "miraibbs" }
                 ]
             }
         """.trimIndent()
