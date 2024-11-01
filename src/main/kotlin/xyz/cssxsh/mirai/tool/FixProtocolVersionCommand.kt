@@ -35,7 +35,7 @@ internal object FixProtocolVersionCommand : CompositeCommand(
             sendMessage("当前已有其它签名服务优先级高于 trpgbot 签名服务")
             return
         }
-        val files = factory.protocolsFolder.listFiles { _, name -> BotConfiguration.MiraiProtocol.values().any { name.startsWith(it.name + "_", true) } && name.endsWith(".json") }
+        val files = factory.protocolsFolder.listFiles { _, name -> name.startsWith(protocol.name + "_", true) && name.endsWith(".json") }
         sendMessage(buildString {
             appendLine("协议版本列表如下:")
             if (files != null) for (file in files) {
