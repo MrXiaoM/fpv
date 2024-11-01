@@ -9,6 +9,7 @@ import xyz.cssxsh.mirai.tool.NetworkServiceFactory
 import xyz.cssxsh.mirai.tool.adapters.QsignWebSocketAdapter.Companion.logger
 import java.net.URI
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 public class Client(
@@ -23,12 +24,13 @@ public class Client(
     private val futureMap: MutableMap<String, CompletableFuture<JsonObject>> = mutableMapOf()
     private var retryCount = 0
     private var scheduleClose = true
+    private val realCloseLatch = CountDownLatch(1)
     @OptIn(InternalCoroutinesApi::class)
     private val connectDef = CompletableDeferred<Boolean>(parentJob).apply {
         invokeOnCompletion(
             onCancelling = true,
             invokeImmediately = true
-        ) { close(1000, "用户请求关闭") }
+        ) { closeBlocking(1000, "用户请求关闭") }
     }
 
     public suspend fun connectSuspend(): Boolean {
@@ -47,7 +49,10 @@ public class Client(
         scheduleClose = false
         super.connect()
     }
-
+    public fun closeBlocking(code: Int, message: String) {
+        close(code, message)
+        realCloseLatch.await()
+    }
     override fun close(code: Int, message: String?) {
         scheduleClose = true
         super.close(code, message)
@@ -96,6 +101,7 @@ public class Client(
         futureMap.clear()
         // 自动重连
         if (!scheduleClose) retry()
+        else realCloseLatch.countDown()
     }
     private fun retry() {
         if (retryTimes < 1 || retryWaitMills < 0) {
