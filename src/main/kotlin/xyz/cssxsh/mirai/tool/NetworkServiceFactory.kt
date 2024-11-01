@@ -318,7 +318,7 @@ public class NetworkServiceFactory(
         } catch (cause: java.io.FileNotFoundException) {
             throw RuntimeException("请检查 trpgbot from ${server.base} 的可用性", cause)
         }
-        if (server.key.isEmpty()) {
+        if (!server.base.startsWith("ws") && server.key.isEmpty()) {
             logger.warning("trpgbot key is empty")
         }
     }
