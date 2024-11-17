@@ -102,6 +102,18 @@ public class QsignWebSocketAdapter(
         logger.debug("Bot(${uin}) submit ${cmd}, ${body.message}")
     }
 
+    override fun getCmdWhitelist(uin: Long): List<String> {
+        val resp = client.send("cmd_whitelist", params {
+            put("uin", uin.toString())
+        }) ?: return listOf()
+        val body = json.decodeFromJsonElement(DataWrapper.serializer(), resp)
+        body.check(uin = uin)
+
+        return runCatching {
+            body.data.jsonObject["list"]?.jsonArray?.map { it.jsonPrimitive.content } ?: listOf()
+        }.getOrElse { listOf() }
+    }
+
     override fun toString(): String {
         return "QsignWebSocketAdapter(server=${server}, uin=${token})"
     }

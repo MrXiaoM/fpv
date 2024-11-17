@@ -1,6 +1,9 @@
 package xyz.cssxsh.mirai.tool.adapters
 
 import kotlinx.serialization.builtins.*
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import net.mamoe.mirai.utils.*
 import org.asynchttpclient.*
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory
@@ -126,6 +129,21 @@ public class QsignHttpAdapter(
         body.check(uin = uin)
 
         logger.debug("Bot(${uin}) submit ${cmd}, ${body.message}")
+    }
+
+    override fun getCmdWhitelist(uin: Long): List<String> {
+        val response = client.prepareGet("${server}/cmd_whitelist")
+            .applyHeader()
+            .addQueryParam("uin", uin.toString())
+            .addQueryParam("ver", ver)
+            .addQueryParam("qua", qua)
+            .execute().get()
+        val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
+        body.check(uin = uin)
+
+        return runCatching {
+            body.data.jsonObject["list"]?.jsonArray?.map { it.jsonPrimitive.content } ?: listOf()
+        }.getOrElse { listOf() }
     }
 
     override fun toString(): String {

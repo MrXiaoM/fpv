@@ -16,6 +16,7 @@ import net.mamoe.mirai.utils.*
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
 import xyz.cssxsh.mirai.tool.NetworkServiceStateException
+import xyz.cssxsh.mirai.tool.adapters.QsignWebSocketAdapter.Companion
 import kotlin.coroutines.CoroutineContext
 
 public typealias JavaAtomicLong = java.util.concurrent.atomic.AtomicLong
@@ -25,7 +26,7 @@ public abstract class AbstractAdapter(
     private val logger: MiraiLogger,
     coroutineContext: CoroutineContext
 ): CoroutineScope, EncryptService {
-
+    private var cmdWhiteList = DEFAULT_CMD_WHITE_LIST;
     override val coroutineContext: CoroutineContext =
         coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { context, exception ->
             when (exception) {
@@ -67,6 +68,10 @@ public abstract class AbstractAdapter(
                 }
             }
         }
+        cmdWhiteList = getCmdWhitelist(uin).ifEmpty {
+            logger.warning("获取 cmd_whitelist 失败，将使用默认白名单列表")
+            DEFAULT_CMD_WHITE_LIST
+        }
 
         logger.info("Bot($uin) initialize complete")
     }
@@ -77,6 +82,7 @@ public abstract class AbstractAdapter(
     protected abstract fun sign(uin: Long, cmd: String, seq: Int, buffer: ByteArray): SignResult
     protected abstract fun requestToken(uin: Long): List<RequestCallback>
     protected abstract fun submit(uin: Long, cmd: String, callbackId: Long, buffer: ByteArray)
+    protected abstract fun getCmdWhitelist(uin: Long): List<String>
     protected fun DataWrapper.check(uin: Long) {
         if (code == 0) return
         token.compareAndSet(uin, 0)
@@ -164,7 +170,7 @@ public abstract class AbstractAdapter(
             signRegister(context.id)
         }
 
-        if (commandName !in CMD_WHITE_LIST) return null
+        if (commandName !in cmdWhiteList) return null
 
         val data = sign(uin = context.id, cmd = commandName, seq = sequenceId, buffer = payload)
 
@@ -185,7 +191,7 @@ public abstract class AbstractAdapter(
 
     public companion object {
         @JvmStatic
-        internal val CMD_WHITE_LIST = NetworkServiceFactory::class.java.getResource("cmd.txt")!!.readText().lines()
+        internal val DEFAULT_CMD_WHITE_LIST = NetworkServiceFactory::class.java.getResource("cmd.txt")!!.readText().lines()
 
         @JvmStatic
         internal val RESET_SESSION = arrayOf(
