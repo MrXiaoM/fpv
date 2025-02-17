@@ -32,6 +32,9 @@ public class Client(
             invokeImmediately = true
         ) { closeBlocking(1000, "用户请求关闭") }
     }
+    init {
+        connectionLostTimeout = 0
+    }
 
     public suspend fun connectSuspend(): Boolean {
         if (super.connectBlocking()) return true
