@@ -87,6 +87,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
                 if (support) append("$escape[1;91m")
                 append(" !!! ").reset()
                 appendLine().append("            ").append("如需使用其他协议，请手动升级协议版本")
+                appendLine().append("              ").append("插件配置文件位于 network.json")
                 appendLine().appendLine()
             }
             FixProtocolVersionCommand.register()
