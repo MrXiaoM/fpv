@@ -66,6 +66,7 @@ public class NetworkServiceFactory(
         @JvmStatic
         public val DEFAULT_CONFIG: String = """
             {
+                "github_mirror": "https://github.moeyy.xyz/${"\$"}{url}",
                 "protocol_source": "MrXiaoM/protocol-versions",
                 "protocol_version": "latest",
                 "main": { "base_url": "wss://qsign.trpgbot.com/ws" },
