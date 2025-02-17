@@ -176,6 +176,7 @@ public class NetworkServiceFactory(
                 ""
             }
         }.getOrElse { "" }
+        if (targetVer.isNotEmpty()) logger.info("签名服务器推荐版本: $targetVer")
         val supportVer: List<String> = runCatching {
             val jsonData = data.jsonObject["data"]!!.jsonObject
             mutableListOf<String>().apply {
@@ -212,21 +213,13 @@ public class NetworkServiceFactory(
                 throw IllegalStateException("从仓库 ${FixProtocolVersion.protocolSource} 获取协议列表失败", cause)
             }
         )
+        val versions = repoVer.filter {
+            supportVer.contains(it) || (targetVer.isNotEmpty() && targetVer == it)
+        }.sorted().reversed()
+        logger.info("支持签名+在仓库中的版本: " + versions.joinToString(", "))
+        logger.info("配置指定的目标版本: " + networkConfig.protocolVersion)
 
-        val ver = run {
-            val latest = networkConfig.protocolVersion.equals("latest", true)
-            val versions = repoVer.filter { supportVer.contains(it) || (targetVer.isNotEmpty() && targetVer == it) }
-            // 如果版本列表为空，返回空版本
-            if (versions.isEmpty()) ""
-            // 如果设定版本不是最新版本，且仓库中有，或本地有，使用该版本
-            else if (!latest && !versions.contains(networkConfig.protocolVersion)) networkConfig.protocolVersion
-            else if (!latest && File(protocolsFolder, "${protocol.name.lowercase()}_${networkConfig.protocolVersion}.json").exists()) networkConfig.protocolVersion
-            // 如果设定版本为最新版本，或者仓库中没有
-            // 如果 targetVer 存在，使用 targetVer
-            else if (targetVer.isNotEmpty()) targetVer
-            // 如果 targetVer 不存在，使用仓库中最新版本
-            else versions.maxOf { it }
-        }
+        val ver = protocol.decideVersion(versions, targetVer)
 
         if (ver.isEmpty()) logger.warning("无法从 trpgbot 回应中获得协议版本，放弃自动更换版本")
         else {
@@ -260,6 +253,18 @@ public class NetworkServiceFactory(
                 logger.warning("协议自动升级失败", e)
             }
         }
+    }
+
+    private fun BotConfiguration.MiraiProtocol.decideVersion(versions: List<String>, targetVer: String): String {
+        if (versions.isEmpty()) return ""
+        val protocol = name.lowercase()
+        val configVer = networkConfig.protocolVersion
+        if (!configVer.equals("latest", true)) {
+            if (versions.contains(configVer)) return configVer
+            if (File(protocolsFolder, "${protocol}_$configVer.json").exists()) return configVer
+        }
+        if (targetVer.isNotEmpty()) return targetVer
+        return versions.maxOf { it }
     }
 
     private fun fetchVersionInfoFromGuide(targetVer: String): JsonObject? {
