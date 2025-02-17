@@ -11,6 +11,8 @@ import java.net.URL
 
 @Serializable
 internal data class NetworkConfig(
+    @SerialName("github_mirror")
+    val githubMirror: String = "https://github.moeyy.xyz/\${url}",
     @SerialName("protocol_source")
     val protocolSource: String = "MrXiaoM/protocol-versions",
     @SerialName("protocol_version")

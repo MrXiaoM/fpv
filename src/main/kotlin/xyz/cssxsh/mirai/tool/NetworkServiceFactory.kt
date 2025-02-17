@@ -14,6 +14,7 @@ import xyz.cssxsh.mirai.tool.adapters.QsignWebSocketAdapter
 import java.io.File
 import java.net.ConnectException
 import java.net.URL
+import java.util.function.Function
 
 public class NetworkServiceFactory(
     private val config: File
@@ -93,6 +94,9 @@ public class NetworkServiceFactory(
             }
             networkConfig = json.decodeFromString(NetworkConfig.serializer(), readText())
             FixProtocolVersion.protocolSource = networkConfig.protocolSource
+            FixProtocolVersion.githubMirror = Function<String, String> { url ->
+                networkConfig.githubMirror.replace("\${url}", url)
+            }
         }
     }
 

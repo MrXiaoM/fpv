@@ -275,7 +275,7 @@ public object FixProtocolVersion {
 
     @JvmStatic
     public var githubMirror: Function<String, String> = Function<String, String> { url ->
-        return@Function "https://ghp.ci/$url"
+        "https://github.moeyy.xyz/$url"
     }
 
     /**
