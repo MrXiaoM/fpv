@@ -19,7 +19,7 @@ internal object FixProtocolVersionPlugin : KotlinPlugin(
     JvmPluginDescription(
         id = "trpgbot.qsign",
         name = "trpgbot",
-        version = "1.13.4"
+        version = "1.13.5"
     ) {
         author("cssxsh & MrXiaoM")
     }
