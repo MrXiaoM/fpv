@@ -73,6 +73,7 @@ public class Client(
         super.close()
     }
     public fun send(type: String, params: JsonObject): JsonObject? {
+        if (!isOpen && !reconnectBlocking()) return null
         val echo = echos.getAndIncrement().toString()
         val future = CompletableFuture<JsonObject>()
         futureMap[echo] = future
