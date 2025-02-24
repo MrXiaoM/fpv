@@ -30,7 +30,11 @@ public class Client(
         invokeOnCompletion(
             onCancelling = true,
             invokeImmediately = true
-        ) { closeBlocking(1000, "用户请求关闭") }
+        ) {
+            if (retryCount == 0 && isOpen) {
+                closeBlocking(1000, "用户请求关闭")
+            }
+        }
     }
     init {
         connectionLostTimeout = 0
