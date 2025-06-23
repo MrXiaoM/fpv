@@ -16,7 +16,6 @@ import net.mamoe.mirai.utils.*
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory
 import xyz.cssxsh.mirai.tool.NetworkServiceFactory.Companion.json
 import xyz.cssxsh.mirai.tool.NetworkServiceStateException
-import xyz.cssxsh.mirai.tool.adapters.QsignWebSocketAdapter.Companion
 import kotlin.coroutines.CoroutineContext
 
 public typealias JavaAtomicLong = java.util.concurrent.atomic.AtomicLong
@@ -24,8 +23,8 @@ public typealias JavaAtomicLong = java.util.concurrent.atomic.AtomicLong
 public abstract class AbstractAdapter(
     private val serverName: String,
     private val logger: MiraiLogger,
-    coroutineContext: CoroutineContext
-): CoroutineScope, EncryptService {
+    coroutineContext: CoroutineContext,
+) : CoroutineScope, EncryptService {
     private var cmdWhiteList = DEFAULT_CMD_WHITE_LIST;
     override val coroutineContext: CoroutineContext =
         coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { context, exception ->
@@ -33,9 +32,11 @@ public abstract class AbstractAdapter(
                 is CancellationException, is InterruptedException -> {
                     // ignored
                 }
+
                 is NetworkServiceStateException -> {
                     // ignored
                 }
+
                 else -> {
                     logger.warning({ "with ${context[CoroutineName]}" }, exception)
                 }
@@ -75,6 +76,7 @@ public abstract class AbstractAdapter(
 
         logger.info("Bot($uin) initialize complete")
     }
+
     protected abstract fun register(uin: Long, androidId: String, guid: String, qimei36: String)
     protected abstract fun destroy(uin: Long)
     protected abstract fun customEnergy(uin: Long, salt: ByteArray, data: String): String
@@ -116,6 +118,7 @@ public abstract class AbstractAdapter(
             }
         }
     }
+
     protected fun callback(uin: Long, request: List<RequestCallback>) {
         launch(CoroutineName(name = "SendMessage")) {
             for (callback in request) {
@@ -164,7 +167,7 @@ public abstract class AbstractAdapter(
         context: EncryptServiceContext,
         sequenceId: Int,
         commandName: String,
-        payload: ByteArray
+        payload: ByteArray,
     ): EncryptService.SignResult? {
         if (commandName == "StatSvc.register") {
             signRegister(context.id)
@@ -186,12 +189,17 @@ public abstract class AbstractAdapter(
     public fun <T> decodeFromString(deserializer: DeserializationStrategy<T>, s: String): T = runCatching {
         return@runCatching json.decodeFromString(deserializer, s)
     }.onFailure {
-        logger.warning("decode json failed: $s")
+        when {
+            "403" in s -> logger.error("你请求sign使用的key错误,请检查你的key是否正确!")
+            "500" in s -> logger.error("签名服务器内部错误,请联系管理员!")
+            else -> logger.warning("decode json failed: $s")
+        }
     }.getOrThrow()
 
     public companion object {
         @JvmStatic
-        internal val DEFAULT_CMD_WHITE_LIST = NetworkServiceFactory::class.java.getResource("cmd.txt")!!.readText().lines()
+        internal val DEFAULT_CMD_WHITE_LIST =
+            NetworkServiceFactory::class.java.getResource("cmd.txt")!!.readText().lines()
 
         @JvmStatic
         internal val RESET_SESSION = arrayOf(
@@ -211,7 +219,7 @@ public data class DataWrapper(
     @SerialName("msg")
     val message: String = "",
     @SerialName("data")
-    val data: JsonElement
+    val data: JsonElement,
 )
 
 @Serializable
@@ -225,7 +233,7 @@ public data class SignResult(
     @SerialName("o3did")
     val o3did: String = "",
     @SerialName("requestCallback")
-    val request: List<RequestCallback> = emptyList()
+    val request: List<RequestCallback> = emptyList(),
 )
 
 @Serializable
@@ -237,5 +245,5 @@ public data class RequestCallback(
     @JsonNames("callbackId", "callback_id")
     val id: Long,
     @SerialName("cmd")
-    val cmd: String
+    val cmd: String,
 )

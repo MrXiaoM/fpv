@@ -319,9 +319,9 @@ public class NetworkServiceFactory(
                     }
                     throw IllegalStateException("trpgbot by ${server.base} 与协议 ${protocol}(${version}) 似乎不匹配$extra")
                 }
-                "赵怡然" !in about -> {
-                    logger.error("请确认服务类型为 trpgbot")
-                }
+//                "赵怡然" !in about -> {
+//                    logger.error("请确认服务类型为 trpgbot")
+//                }
             }
         } catch (cause: ConnectException) {
             throw RuntimeException("请检查 trpgbot from ${server.base} 的可用性", cause)
