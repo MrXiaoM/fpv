@@ -91,6 +91,7 @@ public class QsignHttpAdapter(
             .addFormParam("cmd", cmd)
             .addFormParam("seq", seq.toString())
             .addFormParam("buffer", buffer.toUHexString(""))
+            .addQueryParam("key", key)
             .execute().get()
         val body = decodeFromString(DataWrapper.serializer(), response.responseBody)
         body.check(uin = uin)
